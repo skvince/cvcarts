@@ -1,0 +1,309 @@
+
+/* =========================================
+   CVCARTS INVENTORY — PAGE STYLESHEET
+   Bootstrap 5 + shared/shared.css
+   Design: Green / Emerald
+   ========================================= */
+
+/* ---- Design tokens ---- */
+:root {
+  --cv-deep-green: #0d4229;
+  --cv-dark-green: #15583b;
+  --cv-emerald: #168653;
+  --cv-green: #168653;
+  --cv-lime: #b8f34a;
+  --cv-page-bg: #eef8f0;
+  --cv-border: #dfe8e1;
+  --cv-text: #173e2d;
+  --cv-muted: #718779;
+  --cv-shadow: 0 2px 8px rgba(13, 66, 41, .04);
+  --cv-radius-sm: 9px;
+  --cv-radius-card: 12px;
+  --cv-radius-pill: 30px;
+  --cv-font: 'DM Sans', sans-serif;
+}
+
+/* ---- Inventory table ---- */
+.inventory-table {
+  width: 100%;
+  min-width: 960px;
+  max-width: none;
+  margin: 0;
+  table-layout: fixed;
+}
+
+.inventory-col-product { width: 33%; }
+.inventory-col-category { width: 16%; }
+.inventory-col-price { width: 10%; }
+.inventory-col-stock { width: 11%; }
+.inventory-col-status { width: 12%; }
+.inventory-col-actions { width: 18%; }
+
+.inventory-table th,
+.inventory-table td {
+  overflow-wrap: anywhere;
+}
+
+.inventory-table th:nth-child(3),
+.inventory-table td:nth-child(3),
+.inventory-table th:nth-child(4),
+.inventory-table td:nth-child(4) {
+  text-align: right;
+}
+
+.inventory-table th:nth-child(5),
+.inventory-table td:nth-child(5) {
+  text-align: center;
+}
+
+.inventory-table th:nth-child(6),
+.inventory-table td:nth-child(6) {
+  text-align: right;
+}
+
+.inventory-table th,
+.inventory-table td {
+  vertical-align: middle;
+  padding: 10px 12px;
+}
+
+/* ---- Product row ---- */
+.inventory-product {
+  display: flex;
+  min-width: 230px;
+  align-items: center;
+  gap: 12px;
+}
+
+.inventory-product-image {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  object-fit: cover;
+  border: 1px solid var(--cv-border);
+  border-radius: var(--cv-radius-sm);
+  background: #f8fcf7;
+}
+
+.inventory-product-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.inventory-product-copy strong {
+  color: var(--cv-text);
+  font-weight: var(--fw-semibold);
+  overflow-wrap: anywhere;
+}
+
+.inventory-product-copy small {
+  display: -webkit-box;
+  max-width: 280px;
+  overflow: hidden;
+  color: var(--cv-muted);
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.inventory-product-copy .btn {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+/* ---- Row actions ---- */
+.inventory-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.inventory-row-actions form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.inventory-row-actions .btn {
+  padding: 6px 12px;
+}
+
+/* ---- Size details ---- */
+.inventory-size-details summary {
+  color: var(--cv-emerald);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inventory-size-details .table {
+  min-width: 250px;
+  margin-top: 8px;
+}
+
+.inventory-size-details .table th,
+.inventory-size-details .table td {
+  padding: 8px;
+  font-size: var(--fs-caption);
+}
+
+/* ---- Inactive rows ---- */
+.inventory-table tr.is-archived {
+  background: #f8fcf7;
+}
+
+.inventory-table tr.is-archived .inventory-product-image {
+  filter: grayscale(.45);
+}
+
+.inventory-table .status {
+  white-space: nowrap;
+}
+
+/* ---- Empty state ---- */
+.inventory-empty-row td {
+  padding: 36px 16px;
+  color: var(--cv-muted);
+  text-align: center;
+}
+
+/* =========================================
+   INVENTORY FILTER
+   ========================================= */
+
+.inventory-filter-panel {
+  margin-bottom: 18px;
+}
+
+.inventory-filter-panel .filter-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+}
+
+.inventory-filter-field {
+  min-width: 0;
+}
+
+.inventory-search-field {
+  grid-column: span 2;
+}
+
+/* Filter labels */
+.inventory-filter-field .form-label {
+  margin-bottom: 5px;
+  color: var(--cv-deep-green);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Search and dropdowns */
+.inventory-filter-field .form-control,
+.inventory-filter-field .form-select {
+  width: 100%;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 6px 10px;
+  font-family: var(--cv-font);
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+/* Archived toggle */
+.inventory-archived-toggle {
+  display: flex;
+  min-height: var(--control-height);
+  align-items: center;
+  gap: 9px;
+  color: var(--cv-muted);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.inventory-archived-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--cv-emerald);
+}
+
+/* Filter buttons */
+.inventory-filter-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.inventory-filter-actions .btn {
+  min-width: 120px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 768px) {
+  .inventory-filter-panel .filter-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventory-search-field,
+  .inventory-filter-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .inventory-filter-panel {
+    padding: 14px;
+  }
+
+  .inventory-filter-panel .filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-search-field,
+  .inventory-filter-actions {
+    grid-column: auto;
+  }
+
+  .inventory-filter-actions {
+    flex-direction: column;
+  }
+
+  .inventory-filter-actions .btn {
+    width: 100%;
+  }
+
+  .inventory-product {
+    min-width: 220px;
+    gap: 9px;
+  }
+
+  .inventory-product-image {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+  }
+}
+
+/* ---- Current product thumbnail ---- */
+.inventory-current-thumb {
+  width: 72px;
+  height: 72px;
+  margin-top: 8px;
+  object-fit: cover;
+  border: 1px solid var(--cv-border);
+  border-radius: var(--cv-radius-sm);
+}

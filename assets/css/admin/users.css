@@ -1,0 +1,46 @@
+.users-table {
+    width: 100%;
+    min-width: 850px;
+}
+
+.users-table th,
+.users-table td {
+    vertical-align: middle;
+}
+
+.users-table .user-name {
+    color: var(--deep-green);
+    font-weight: var(--fw-semibold);
+}
+
+.users-toolbar {
+    margin-bottom: 16px;
+}
+
+.users-table .status {
+    text-transform: capitalize;
+    font-size: var(--fs-caption);
+}
+
+.users-table th:nth-child(5),
+.users-table td:nth-child(5) {
+    text-align: right;
+}
+
+.users-table th:nth-child(3),
+.users-table td:nth-child(3),
+.users-table th:nth-child(4),
+.users-table td:nth-child(4) {
+    text-align: center;
+}
+
+.users-table th:last-child,
+.users-table td:last-child {
+    text-align: right;
+}
+
+@media (max-width: 768px) {
+    .users-toolbar .filter-form {
+        grid-template-columns: 1fr;
+    }
+}

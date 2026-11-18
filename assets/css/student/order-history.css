@@ -1,0 +1,14 @@
+.student-order-history .history-table {
+    min-width: 800px;
+}
+
+.student-order-history .order-detail-panel {
+    margin-bottom: 16px;
+}
+
+.student-order-history .order-qr {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+}

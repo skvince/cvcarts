@@ -1,0 +1,12 @@
+.admin-settings-page .settings-section {
+    max-width: 760px;
+    margin-bottom: 16px;
+}
+
+.admin-settings-page .settings-section .info-list {
+    margin-bottom: 16px;
+}
+
+.admin-settings-page .security-help {
+    margin-bottom: 12px;
+}

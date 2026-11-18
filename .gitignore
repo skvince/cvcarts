@@ -1,0 +1,19 @@
+
+# Environment files
+/.env
+/.env.*
+!/.env.example
+
+# Logs
+/storage/logs/*
+/storage/email-logs/*
+
+# Private payment uploads
+/uploads/payment-proofs/*
+
+# Composer dependencies
+/vendor/
+
+# User uploads
+/uploads/*
+!.gitkeep

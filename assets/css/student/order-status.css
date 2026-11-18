@@ -1,0 +1,33 @@
+.student-order-status .order-detail-panel {
+    margin-bottom: 16px;
+}
+
+.student-order-status .orders-table {
+    min-width: 850px;
+}
+
+.student-order-status .orders-table th,
+.student-order-status .orders-table td {
+    vertical-align: middle;
+}
+
+.student-order-status .orders-table .action-cell form {
+    display: flex;
+    justify-content: flex-end;
+    margin: 5px 0 0;
+}
+
+.student-order-status .orders-table .action-cell .btn {
+    min-width: 100px;
+}
+
+.student-order-status .order-qr {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+}
+
+.student-order-status .payment-resubmit {
+    max-width: 620px;
+}

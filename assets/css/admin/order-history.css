@@ -1,0 +1,11 @@
+.admin-order-history .history-table {
+    min-width: 1150px;
+}
+
+.admin-order-history .order-actions {
+    min-width: 180px;
+}
+
+.admin-order-history .order-detail-panel {
+    margin-bottom: 16px;
+}

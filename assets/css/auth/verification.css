@@ -1,0 +1,19 @@
+@import url("signup.css");
+
+.auth-btn,
+.reset-btn {
+    text-decoration: none;
+}
+
+.auth-btn .card-header,
+.auth-card .card-header {
+    text-align: center;
+}
+
+.auth-card form {
+    margin-top: 20px;
+}
+
+.auth-card .form-alert {
+    margin-bottom: 12px;
+}

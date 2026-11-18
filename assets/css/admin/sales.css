@@ -1,0 +1,361 @@
+/* ========================================
+   CVCARTS ADMIN - SALES REPORT
+   Compact layout using existing shared theme
+======================================== */
+
+.sales-page-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.sales-page-heading .page-heading {
+    margin-bottom: 0;
+}
+
+.sales-toolbar {
+    display: grid;
+    grid-template-columns: minmax(160px, .7fr) 1fr;
+    align-items: end;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.sales-period-field {
+    display: grid;
+    gap: 5px;
+    color: var(--deep-green);
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-bold);
+}
+
+.sales-toolbar .form-select {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--control-height);
+    border-color: var(--border);
+    border-radius: 9px;
+    background: #f8fcf7;
+    color: var(--text);
+    font-size: var(--fs-body);
+}
+
+.sales-toolbar .filter-actions {
+    grid-column: auto;
+    align-items: end;
+}
+
+.sales-toolbar .filter-actions .btn {
+    white-space: nowrap;
+}
+
+.sales-toolbar .filter-actions .btn-secondary {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--deep-green);
+    box-shadow: none;
+}
+
+.sales-toolbar .filter-actions .btn-secondary:hover {
+    background: var(--surface-soft);
+    color: var(--deep-green);
+    transform: translateY(-1px);
+}
+
+/* Summary cards */
+.sales-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.sales-stats .stat-card {
+    position: relative;
+    min-width: 0;
+    min-height: 132px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 0;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    transition: transform .16s ease, box-shadow .16s ease;
+}
+
+.sales-stats .stat-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+}
+
+.sales-stats .stat-icon {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #eaf4ed;
+    color: var(--emerald);
+    font-size: 19px;
+}
+
+.sales-stats .stat-card-blue .stat-icon {
+    background: #e6f3f4;
+    color: #176d75;
+}
+
+.sales-stats p {
+    max-width: calc(100% - 58px);
+    margin: 0 0 7px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: .04em;
+    line-height: 1.35;
+    text-transform: uppercase;
+}
+
+.sales-stats h2 {
+    max-width: 100%;
+    margin: 0;
+    color: var(--deep-green);
+    font-family: var(--font-heading);
+    font-size: clamp(26px, 2.2vw, 32px);
+    font-weight: var(--fw-bold);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+.sales-stats .stat-card-emerald,
+.sales-stats .stat-card-blue {
+    border-left: 3px solid var(--emerald);
+}
+
+.sales-stats .stat-card-blue {
+    border-left-color: #3c9ca2;
+}
+
+.sales-stats .stat-icon i {
+    display: block;
+}
+
+.sales-stats .stat-card-blue h2 {
+    color: #176d75;
+}
+
+.sales-stats .stat-card-emerald h2 {
+    color: var(--deep-green);
+}
+
+/* Two-column sales breakdown */
+.sales-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.sales-breakdown-panel {
+    min-width: 0;
+    padding: 22px;
+}
+
+.sales-breakdown-panel .panel-heading {
+    margin-bottom: 10px;
+}
+
+.sales-breakdown-panel .panel-heading h2,
+.sales-transactions .panel-heading h2 {
+    margin: 0;
+    font-size: var(--fs-h2);
+    font-weight: var(--fw-bold);
+}
+
+/* Payment method rows */
+.sales-breakdown-panel .info-list {
+    width: 100%;
+}
+
+.sales-breakdown-panel .payment-method-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e7efe8;
+}
+
+.sales-breakdown-panel .payment-method-row:last-child {
+    border-bottom: 0;
+}
+
+.sales-breakdown-panel .payment-method-row strong {
+    display: block;
+    color: var(--deep-green);
+    font-size: var(--fs-body);
+    font-weight: var(--fw-semibold);
+}
+
+.sales-breakdown-panel .payment-method-row small {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: var(--fs-caption);
+}
+
+.sales-breakdown-panel .stock-pill {
+    flex-shrink: 0;
+}
+
+/* Sales summary */
+.sales-summary {
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    border: 1px solid #d5ead6;
+    border-radius: 10px;
+    background: #eff8ed;
+}
+
+.sales-summary-icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: #dff1df;
+    color: #08784d;
+    font-size: 18px;
+}
+
+.sales-summary strong {
+    display: block;
+    color: var(--deep-green);
+    font-family: var(--font-heading);
+    font-size: var(--fs-h2);
+    font-weight: var(--fw-bold);
+}
+
+.sales-summary p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: var(--fs-caption);
+}
+
+/* Transaction history */
+.sales-transactions {
+    min-width: 0;
+    padding: 22px;
+}
+
+.sales-transactions .panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.sales-result-count {
+    color: var(--muted);
+    font-size: var(--fs-caption);
+}
+
+.sales-transactions .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.sales-transactions .history-table {
+    width: 100%;
+    min-width: 650px;
+    margin-bottom: 0;
+}
+
+.sales-empty-state {
+    padding: 24px !important;
+    color: var(--muted);
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .sales-page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .sales-toolbar {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .sales-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .sales-stats {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .sales-stats .stat-card {
+        min-height: 124px;
+        padding: 18px;
+    }
+
+    .sales-stats .stat-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 17px;
+    }
+
+    .sales-stats h2 {
+        font-size: clamp(24px, 7vw, 28px);
+    }
+
+    .sales-stats p {
+        font-size: 11px;
+    }
+
+    .sales-breakdown-panel,
+    .sales-transactions {
+        padding: 18px;
+    }
+
+    .sales-toolbar {
+        width: 100%;
+    }
+
+    .sales-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .sales-toolbar .filter-actions {
+        flex-direction: column;
+    }
+
+    .sales-toolbar .filter-actions .btn {
+        width: 100%;
+    }
+}

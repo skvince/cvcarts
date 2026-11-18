@@ -1,0 +1,38 @@
+.admin-order-status .order-actions {
+    min-width: 230px;
+}
+
+.admin-order-status .orders-table {
+    min-width: 950px;
+}
+
+.admin-order-status .orders-table th,
+.admin-order-status .orders-table td {
+    vertical-align: middle;
+}
+
+.admin-order-status .order-detail-panel {
+    margin-bottom: 16px;
+}
+
+.admin-order-status .order-actions form {
+    display: grid;
+    gap: 6px;
+}
+
+.admin-order-status .order-status-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.admin-order-status .order-actions .form-control,
+.admin-order-status .order-actions .select-control {
+    min-width: 150px;
+}
+
+@media (max-width: 768px) {
+    .admin-order-status .order-actions {
+        min-width: 190px;
+    }
+}

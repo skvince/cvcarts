@@ -1,0 +1,23 @@
+.admin-ready-to-claim .table-wrapper table {
+    min-width: 1250px;
+}
+
+.admin-ready-to-claim .order-detail-panel {
+    margin-bottom: 16px;
+}
+
+.admin-ready-to-claim .order-qr {
+    text-align: center;
+}
+
+.admin-ready-to-claim .order-qr .qr-code {
+    display: flex;
+    justify-content: center;
+    margin: 16px auto;
+}
+
+@media (max-width: 768px) {
+    .admin-ready-to-claim .table-wrapper table {
+        min-width: 1120px;
+    }
+}
