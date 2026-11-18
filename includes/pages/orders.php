@@ -663,11 +663,22 @@ $flashes = cvcarts_get_flash();
                         if (qrCode) qrCode.scrollIntoView({ block: 'center', behavior: 'smooth' });
                     }, 250);
                 }
-                modalElement.addEventListener('hidden.bs.modal', function () {
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('view');
-                    window.history.replaceState({}, '', url.toString());
-                }, { once: true });
+                if (modalElement.dataset.cleanupBound !== 'true') {
+                    modalElement.dataset.cleanupBound = 'true';
+                    modalElement.addEventListener('hidden.bs.modal', function () {
+                        document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+                            backdrop.remove();
+                        });
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('overflow');
+                        document.body.style.removeProperty('padding-right');
+                        document.body.style.removeProperty('margin-right');
+
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('view');
+                        window.history.replaceState({}, '', url.toString());
+                    });
+                }
             }
         }
         initializeOrderDetailsModal();

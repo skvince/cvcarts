@@ -321,7 +321,7 @@
                 realtimeRefreshQueued = true;
                 return;
             }
-            if (hasUnsubmittedChanges || document.querySelector('dialog[open]')
+            if (hasUnsubmittedChanges || document.querySelector('dialog[open], .modal.show')
                 || main.querySelector('[data-app-alert="true"]:not([hidden]), .flash-message:not([hidden])')) return;
 
             window.fetch(window.location.href, {
@@ -334,7 +334,7 @@
                 const nextDocument = new DOMParser().parseFromString(html, 'text/html');
                 const nextMain = nextDocument.querySelector('.main-content');
                 const currentMain = document.querySelector('.main-content');
-                if (!nextMain || !currentMain || hasUnsubmittedChanges || document.querySelector('dialog[open]')) return;
+                if (!nextMain || !currentMain || hasUnsubmittedChanges || document.querySelector('dialog[open], .modal.show')) return;
                 currentMain.replaceChildren.apply(currentMain, Array.from(nextMain.childNodes).map(function (node) {
                     return document.importNode(node, true);
                 }));
