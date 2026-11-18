@@ -1,8 +1,10 @@
-SET NAMES utf8mb4;
+﻿SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS=0;
 SET UNIQUE_CHECKS=0;
 -- CVCarts deployment SQL export
 -- Import this file in MySQL or MariaDB using phpMyAdmin or mysql command line.
+CREATE DATABASE IF NOT EXISTS cscqc_ecommerce;
+USE cscqc_ecommerce;
 
 DROP TABLE IF EXISTS `account_tokens`;
 CREATE TABLE `account_tokens` (
