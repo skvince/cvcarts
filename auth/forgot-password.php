@@ -49,16 +49,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cvcarts_flash('warning', 'Too many recovery attempts. Please wait and try again.');
             cvcarts_redirect($recoveryUrl);
         }
-        $statement = $db->prepare("SELECT id, email, first_name, security_question, security_answer_hash FROM users WHERE role = 'admin' AND is_active = 1 AND account_status = 'active' AND (username = :username OR email = :email) LIMIT 1");
-        $statement->execute(['username' => $identifier, 'email' => $identifier]);
-        $admin = $statement->fetch(PDO::FETCH_ASSOC);
-        cvcarts_record_auth_attempt('admin_recovery_lookup', $identifier, (bool)$admin);
-        if (!$admin || !$admin['security_question'] || !$admin['security_answer_hash']) {
+        $statement = $db->prepare("SELECT id, email, first_name, role, security_question, security_answer_hash FROM users WHERE role IN ('admin', 'student') AND is_active = 1 AND account_status = 'active' AND (
+            (role = 'admin' AND (username = :admin_username OR email = :admin_email))
+            OR (role = 'student' AND is_verified = 1 AND email_verified_at IS NOT NULL AND email LIKE '%@cscqc.edu.ph' AND email = :student_email)
+        ) LIMIT 1");
+        $statement->execute([
+            'admin_username' => $identifier,
+            'admin_email' => $identifier,
+            'student_email' => $identifier,
+        ]);
+        $account = $statement->fetch(PDO::FETCH_ASSOC);
+        cvcarts_record_auth_attempt('admin_recovery_lookup', $identifier, (bool)$account);
+        if (!$account || !$account['security_question'] || !$account['security_answer_hash']) {
             unset($_SESSION['admin_recovery_user_id'], $_SESSION['admin_recovery_otp_sent'], $_SESSION['admin_recovery_verified_user_id']);
             cvcarts_flash('error', 'Security-question recovery is unavailable for that account. Use email recovery or contact support.');
             cvcarts_redirect($recoveryUrl);
         }
-        $_SESSION['admin_recovery_user_id'] = (int)$admin['id'];
+        $_SESSION['admin_recovery_user_id'] = (int)$account['id'];
         $_SESSION['admin_recovery_expires_at'] = time() + 15 * 60;
         unset($_SESSION['admin_recovery_otp_sent'], $_SESSION['admin_recovery_verified_user_id']);
         cvcarts_redirect($recoveryUrl . '?step=question');
@@ -66,46 +73,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'verify_answer') {
         $recoveryId = (int)($_SESSION['admin_recovery_user_id'] ?? 0);
-        $statement = $db->prepare("SELECT id, email, first_name, security_answer_hash FROM users WHERE id = :id AND role = 'admin' AND is_active = 1 AND account_status = 'active' LIMIT 1");
+        $statement = $db->prepare("SELECT id, email, first_name, role, security_answer_hash FROM users WHERE id = :id AND role IN ('admin', 'student') AND is_active = 1 AND account_status = 'active'
+            AND (role = 'admin' OR (is_verified = 1 AND email_verified_at IS NOT NULL AND email LIKE '%@cscqc.edu.ph')) LIMIT 1");
         $statement->execute(['id' => $recoveryId]);
-        $admin = $statement->fetch(PDO::FETCH_ASSOC);
+        $account = $statement->fetch(PDO::FETCH_ASSOC);
         $answerInput = $_POST['security_answer'] ?? '';
         $answer = is_string($answerInput) ? cvcarts_normalize_answer($answerInput) : '';
-        if (!$admin) {
+        if (!$account) {
             unset($_SESSION['admin_recovery_user_id']);
             cvcarts_flash('error', 'Restart account recovery and try again.');
             cvcarts_redirect($recoveryUrl);
         }
-        if (cvcarts_rate_limited('admin_security_answer', $admin['email'], 5, 10, 15, true)) {
-            cvcarts_record_auth_attempt('admin_security_answer', $admin['email'], false);
+        if (cvcarts_rate_limited('admin_security_answer', $account['email'], 5, 10, 15, true)) {
+            cvcarts_record_auth_attempt('admin_security_answer', $account['email'], false);
             cvcarts_flash('warning', 'Too many incorrect answers. Please wait before trying again.');
             cvcarts_redirect($recoveryUrl . '?step=question');
         }
-        if (!password_verify($answer, $admin['security_answer_hash'])) {
-            cvcarts_record_auth_attempt('admin_security_answer', $admin['email'], false);
+        if (!password_verify($answer, $account['security_answer_hash'])) {
+            cvcarts_record_auth_attempt('admin_security_answer', $account['email'], false);
             cvcarts_flash('error', 'The security answer did not match.');
             cvcarts_redirect($recoveryUrl . '?step=question');
         }
 
-        cvcarts_record_auth_attempt('admin_security_answer', $admin['email'], true);
-        if (cvcarts_rate_limited('admin_security_otp_send', $admin['email'], 1, 1, 1)
-            || cvcarts_rate_limited('admin_security_otp_send', $admin['email'], 5, 10, 60)) {
-            cvcarts_record_auth_attempt('admin_security_otp_send', $admin['email'], false);
+        cvcarts_record_auth_attempt('admin_security_answer', $account['email'], true);
+        if (cvcarts_rate_limited('admin_security_otp_send', $account['email'], 1, 1, 1)
+            || cvcarts_rate_limited('admin_security_otp_send', $account['email'], 5, 10, 60)) {
+            cvcarts_record_auth_attempt('admin_security_otp_send', $account['email'], false);
             cvcarts_flash('warning', 'A recovery code was sent recently. Check your email before requesting another.');
             cvcarts_redirect($recoveryUrl . '?step=question');
         }
 
         $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        cvcarts_store_token((int)$admin['id'], 'admin_security_otp', $otp, 10 * 60);
-        $mailResult = cvcarts_send_admin_otp_email($admin, $otp);
-        cvcarts_record_auth_attempt('admin_security_otp_send', $admin['email'], $mailResult['sent']);
+        cvcarts_store_token((int)$account['id'], 'admin_security_otp', $otp, 10 * 60);
+        $mailResult = $account['role'] === 'admin'
+            ? cvcarts_send_admin_otp_email($account, $otp)
+            : cvcarts_send_student_otp_email($account, $otp);
+        cvcarts_record_auth_attempt('admin_security_otp_send', $account['email'], $mailResult['sent']);
         if (!$mailResult['sent']) {
             $db->prepare("UPDATE account_tokens SET used_at = NOW() WHERE user_id = :user_id AND token_type = 'admin_security_otp' AND used_at IS NULL")
-                ->execute(['user_id' => $admin['id']]);
+                ->execute(['user_id' => $account['id']]);
             cvcarts_flash('error', 'The recovery code could not be delivered. Please try email recovery or contact support.');
             cvcarts_redirect($recoveryUrl . '?step=question');
         }
-        $_SESSION['admin_recovery_otp_sent'] = (int)$admin['id'];
+        $_SESSION['admin_recovery_otp_sent'] = (int)$account['id'];
         $_SESSION['admin_recovery_expires_at'] = time() + 10 * 60;
         cvcarts_redirect($recoveryUrl . '?step=otp');
     }
@@ -114,29 +124,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $recoveryId = (int)($_SESSION['admin_recovery_otp_sent'] ?? 0);
         $otpInput = $_POST['otp'] ?? '';
         $otp = is_string($otpInput) ? trim($otpInput) : '';
-        $statement = $db->prepare("SELECT id, email FROM users WHERE id = :id AND role = 'admin' AND account_status = 'active' LIMIT 1");
+        $statement = $db->prepare("SELECT id, email, role FROM users WHERE id = :id AND role IN ('admin', 'student') AND is_active = 1 AND account_status = 'active'
+            AND (role = 'admin' OR (is_verified = 1 AND email_verified_at IS NOT NULL AND email LIKE '%@cscqc.edu.ph')) LIMIT 1");
         $statement->execute(['id' => $recoveryId]);
-        $admin = $statement->fetch(PDO::FETCH_ASSOC);
-        if (!$admin) {
+        $account = $statement->fetch(PDO::FETCH_ASSOC);
+        if (!$account) {
             unset($_SESSION['admin_recovery_otp_sent']);
             cvcarts_flash('error', 'Restart account recovery and try again.');
             cvcarts_redirect($recoveryUrl);
         }
-        if (cvcarts_rate_limited('admin_security_otp', $admin['email'], 5, 10, 15, true)) {
-            cvcarts_record_auth_attempt('admin_security_otp', $admin['email'], false);
+        if (cvcarts_rate_limited('admin_security_otp', $account['email'], 5, 10, 15, true)) {
+            cvcarts_record_auth_attempt('admin_security_otp', $account['email'], false);
             cvcarts_flash('warning', 'Too many code attempts. Please wait before trying again.');
             cvcarts_redirect($recoveryUrl . '?step=otp');
         }
         $tokenStatement = $db->prepare("SELECT id FROM account_tokens WHERE user_id = :user_id AND token_type = 'admin_security_otp' AND token_hash = :token_hash AND used_at IS NULL AND expires_at > NOW() LIMIT 1");
-        $tokenStatement->execute(['user_id' => $admin['id'], 'token_hash' => hash('sha256', $otp)]);
+        $tokenStatement->execute(['user_id' => $account['id'], 'token_hash' => hash('sha256', $otp)]);
         $tokenId = $tokenStatement->fetchColumn();
-        cvcarts_record_auth_attempt('admin_security_otp', $admin['email'], (bool)$tokenId);
+        cvcarts_record_auth_attempt('admin_security_otp', $account['email'], (bool)$tokenId);
         if (!$tokenId || !preg_match('/^\d{6}$/', $otp)) {
             cvcarts_flash('error', 'The code is invalid or expired.');
             cvcarts_redirect($recoveryUrl . '?step=otp');
         }
         $db->prepare('UPDATE account_tokens SET used_at = NOW() WHERE id = :id AND used_at IS NULL')->execute(['id' => $tokenId]);
-        $_SESSION['admin_recovery_verified_user_id'] = (int)$admin['id'];
+        $_SESSION['admin_recovery_verified_user_id'] = (int)$account['id'];
         $_SESSION['admin_recovery_expires_at'] = time() + 10 * 60;
         unset($_SESSION['admin_recovery_user_id'], $_SESSION['admin_recovery_otp_sent']);
         cvcarts_redirect($recoveryUrl . '?step=new-password');
@@ -158,12 +169,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $db->beginTransaction();
         try {
-            $db->prepare("UPDATE users SET password_hash = :hash, must_change_password = 0, password_changed_at = NOW(), auth_version = auth_version + 1 WHERE id = :id AND role = 'admin'")
-                ->execute(['hash' => password_hash($newPassword, PASSWORD_DEFAULT), 'id' => $recoveryId]);
+            $passwordUpdate = $db->prepare("UPDATE users SET password_hash = :hash, must_change_password = 0, password_changed_at = NOW(), auth_version = auth_version + 1
+                WHERE id = :id AND role IN ('admin', 'student') AND is_active = 1 AND account_status = 'active'
+                AND (role = 'admin' OR (is_verified = 1 AND email_verified_at IS NOT NULL AND email LIKE '%@cscqc.edu.ph'))");
+            $passwordUpdate->execute(['hash' => password_hash($newPassword, PASSWORD_DEFAULT), 'id' => $recoveryId]);
+            if ($passwordUpdate->rowCount() !== 1) {
+                $db->rollBack();
+                unset($_SESSION['admin_recovery_verified_user_id']);
+                cvcarts_flash('error', 'This account is no longer eligible for password recovery.');
+                cvcarts_redirect($recoveryUrl);
+            }
             $db->prepare('UPDATE account_tokens SET used_at = COALESCE(used_at, NOW()) WHERE user_id = :user_id AND used_at IS NULL')
                 ->execute(['user_id' => $recoveryId]);
-            $db->prepare('INSERT INTO admin_activity (admin_id, action, details) VALUES (:admin_id, :action, :details)')
-                ->execute(['admin_id' => $recoveryId, 'action' => 'Admin password recovered', 'details' => 'Password reset after security question and email code verification.']);
+            $accountStatement = $db->prepare("SELECT role FROM users WHERE id = :id LIMIT 1");
+            $accountStatement->execute(['id' => $recoveryId]);
+            $accountRole = (string)$accountStatement->fetchColumn();
+            if ($accountRole === 'admin') {
+                $db->prepare('INSERT INTO admin_activity (admin_id, action, details) VALUES (:admin_id, :action, :details)')
+                    ->execute(['admin_id' => $recoveryId, 'action' => 'Admin password recovered', 'details' => 'Password reset after security question and email code verification.']);
+            }
             $db->commit();
             cvcarts_record_auth_attempt('admin_security_password_reset', (string)$recoveryId, true);
         } catch (Throwable $e) {
@@ -173,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw $e;
         }
         unset($_SESSION['admin_recovery_verified_user_id']);
-        cvcarts_flash('success', 'Your admin password has been reset. You can now sign in.');
+        cvcarts_flash('success', 'Your password has been reset. You can now sign in.');
         cvcarts_redirect(cvcarts_url('/auth/login.php'));
     }
 
@@ -189,7 +213,8 @@ if ($recoveryExpiresAt < time()) {
 $recoveryUser = null;
 $recoveryId = (int)($_SESSION['admin_recovery_user_id'] ?? $_SESSION['admin_recovery_otp_sent'] ?? $_SESSION['admin_recovery_verified_user_id'] ?? 0);
 if ($recoveryId && $recoveryExpiresAt >= time()) {
-    $statement = $db->prepare("SELECT id, first_name, email, security_question FROM users WHERE id = :id AND role = 'admin' AND account_status = 'active' LIMIT 1");
+    $statement = $db->prepare("SELECT id, first_name, email, role, security_question FROM users WHERE id = :id AND role IN ('admin', 'student') AND is_active = 1 AND account_status = 'active'
+        AND (role = 'admin' OR (is_verified = 1 AND email_verified_at IS NOT NULL AND email LIKE '%@cscqc.edu.ph')) LIMIT 1");
     $statement->execute(['id' => $recoveryId]);
     $recoveryUser = $statement->fetch(PDO::FETCH_ASSOC) ?: null;
 }
@@ -203,34 +228,26 @@ $flashes = cvcarts_get_flash();
     <title>CVCarts | Account Recovery</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/forgot-password.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/forgot-password.css') . '?v=' . filemtime(__DIR__ . '/../assets/css/auth/forgot-password.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/auth-experience.css?v=' . filemtime(__DIR__ . '/../assets/css/auth/auth-experience.css'))); ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="auth-page">
     <div class="ambient-glow glow-one"></div>
     <div class="ambient-glow glow-two"></div>
     <div class="ambient-glow glow-three"></div>
-    <main class="forgot-container">
-        <section class="brand-section">
-            <div class="brand-top"><span class="brand-indicator"></span><span>CAMPUS VIA CART</span></div>
-            <img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="CVCarts Logo" class="brand-logo">
-            <div class="brand-content">
-                <p class="brand-eyebrow">SECURE ADMIN ACCESS</p>
-                <h2>A Safe Return,<br><span>Just One Step Away.</span></h2>
-                <p class="brand-description">Students can recover access through their verified school email. Administrators can use email or their security question and email code.</p>
-            </div>
-            <div class="brand-bottom"><div class="bottom-line"></div><span>SHOP SMART. LIVE EASY.</span></div>
-        </section>
+    <main class="forgot-container auth-layout">
+        <?php require __DIR__ . '/../includes/auth-brand.php'; ?>
         <section class="forgot-card">
             <div class="card-glow"></div>
             <div class="card-content">
                 <div class="card-header">
-                    <div class="welcome-icon">✦</div>
+                    <div class="welcome-icon" aria-hidden="true"><i class="bi bi-shield-lock"></i></div>
                     <p class="welcome-label">ACCOUNT RECOVERY</p>
                     <h1>Forgot Password?</h1>
-                    <p class="subtitle">Reset access to your administrator account.</p>
+                    <p class="subtitle">Reset access to your student or administrator account.</p>
                 </div>
                 <?php foreach ($flashes as $flash): ?><div class="form-alert form-alert-<?php echo cvcarts_h($flash['type']); ?>" role="alert"><?php echo cvcarts_h($flash['message']); ?></div><?php endforeach; ?>
 
@@ -240,7 +257,7 @@ $flashes = cvcarts_get_flash();
                         <div class="input-group"><label for="email-identifier">School Email or Admin Username</label><input id="email-identifier" type="text" name="identifier" placeholder="name@cscqc.edu.ph or admin" autocomplete="username" required></div>
                         <button class="reset-btn" type="submit" name="action" value="request_email"><span>Recover Through Email</span><span class="arrow">→</span></button>
                         <div class="divider"><span>OR</span></div>
-                        <button class="reset-btn" type="submit" name="action" value="lookup_security"><span>Use Admin Security Question</span><span class="arrow">→</span></button>
+                        <button class="reset-btn" type="submit" name="action" value="lookup_security"><span>Use Security Question</span><span class="arrow">→</span></button>
                     </form>
                 <?php elseif (!empty($_SESSION['admin_recovery_verified_user_id'])): ?>
                     <form method="post" action="<?php echo cvcarts_h($recoveryUrl); ?>">
@@ -270,5 +287,6 @@ $flashes = cvcarts_get_flash();
             </div>
         </section>
     </main>
+    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/auth-carousel.js?v=' . filemtime(__DIR__ . '/../assets/js/auth-carousel.js'))); ?>" defer></script>
 </body>
 </html>

@@ -120,32 +120,18 @@ $flashes = cvcarts_get_flash();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/signup.css') . '?v=' . filemtime(__DIR__ . '/../assets/css/auth/signup.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/auth-experience.css?v=' . filemtime(__DIR__ . '/../assets/css/auth/auth-experience.css'))); ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="auth-page auth-page--signup">
     <div class="ambient-glow glow-one"></div>
     <div class="ambient-glow glow-two"></div>
     <div class="ambient-glow glow-three"></div>
 
-    <main class="auth-container">
-        <section class="brand-section">
-            <div class="brand-top">
-                <span class="brand-indicator"></span>
-                <span>CAMPUS VIA CART</span>
-            </div>
-            <img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="CVCarts Logo" class="brand-logo">
-            <div class="brand-content">
-                <p class="brand-eyebrow">JOIN THE CVCARTS COMMUNITY</p>
-                <h2>Start Your Journey,<br><span>Shop Smarter Today.</span></h2>
-                <p class="brand-description">Create your CVCarts account and enjoy a convenient way to shop for your everyday essentials.</p>
-            </div>
-            <div class="brand-bottom">
-                <div class="bottom-line"></div>
-                <span>SHOP SMART. LIVE EASY.</span>
-            </div>
-        </section>
+    <main class="auth-container auth-layout">
+        <?php require __DIR__ . '/../includes/auth-brand.php'; ?>
 
         <section class="auth-card">
             <div class="card-glow"></div>
@@ -160,7 +146,7 @@ $flashes = cvcarts_get_flash();
                     <div class="form-alert form-alert-<?php echo cvcarts_h($flash['type']); ?>" role="alert"><?php echo cvcarts_h($flash['message']); ?></div>
                 <?php endforeach; ?>
 
-                <form action="<?php echo cvcarts_h(cvcarts_url('/auth/register.php')); ?>" method="POST">
+                <form class="signup-form" action="<?php echo cvcarts_h(cvcarts_url('/auth/register.php')); ?>" method="POST">
                     <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>">
                     <div class="name-fields">
                         <div class="input-group">
@@ -177,7 +163,7 @@ $flashes = cvcarts_get_flash();
                         </div>
                     </div>
 
-                    <div class="input-group">
+                    <div class="input-group form-field-wide">
                         <label for="email">School Email Address</label>
                         <input type="email" id="email" name="email" placeholder="name@cscqc.edu.ph" autocomplete="email" pattern="[A-Za-z0-9._%+-]+@cscqc\.edu\.ph" title="Use your official @cscqc.edu.ph school email address." required>
                     </div>
@@ -291,5 +277,6 @@ $flashes = cvcarts_get_flash();
             }
         });
     </script>
+    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/auth-carousel.js?v=' . filemtime(__DIR__ . '/../assets/js/auth-carousel.js'))); ?>" defer></script>
 </body>
 </html>

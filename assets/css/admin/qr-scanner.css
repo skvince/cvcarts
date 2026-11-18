@@ -48,6 +48,12 @@
     margin: 0 auto;
 }
 
+.scanner-panel #status.success {
+    border-color: #b7dfbd;
+    background: #eaf7ec;
+    color: #17613a;
+}
+
 @media (max-width: 800px) {
     .claim-grid {
         grid-template-columns: 1fr;

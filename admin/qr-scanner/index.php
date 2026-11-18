@@ -34,8 +34,9 @@ $csrfToken = cvcarts_csrf_token();
                     </div>
                     <div id="status" class="flash-message" role="status" aria-live="polite">Ready to scan a pickup QR code.</div>
                     <form id="manual-verify-form" class="form-field">
-                        <label class="form-label" for="manual-qr-token">Manual Order Verification</label>
-                        <div class="form-inline"><input class="form-control" id="manual-qr-token" type="text" maxlength="64" pattern="[A-Fa-f0-9]{32}|[A-Fa-f0-9]{64}" placeholder="Enter QR token" autocomplete="off" required><button class="btn btn-small" type="submit">Verify Order</button></div>
+                        <label class="form-label" for="manual-order-identifier">Manual Order Verification</label>
+                        <div class="form-inline"><input class="form-control" id="manual-order-identifier" type="text" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="Enter Order Number (e.g., ORD-1024)" autocomplete="off" aria-describedby="manual-order-help" required><button class="btn btn-small" type="submit">Verify Order</button></div>
+                        <small id="manual-order-help" class="form-help">Only orders marked as 'Ready to Claim' can be verified manually.</small>
                     </form>
                     <button id="scan-another" class="btn" type="button" hidden>Scan Another Order</button>
                     <button id="clear-scan" class="btn btn-small btn-secondary" type="button">Clear Scan</button>
@@ -58,7 +59,7 @@ $csrfToken = cvcarts_csrf_token();
                     <h3>Products</h3>
                     <div class="table-wrapper"><table><thead><tr><th>Product</th><th>Size</th><th>Quantity</th><th>Unit price</th></tr></thead><tbody id="order-items"></tbody></table></div>
                     <div class="claim-action">
-                        <button id="claim-order" class="btn" type="button" hidden>Confirm Claim</button>
+                        <button id="claim-order" class="btn" type="button" hidden>Confirm &amp; Mark as Claimed</button>
                     </div>
                 </section>
             </div>
@@ -76,7 +77,7 @@ $csrfToken = cvcarts_csrf_token();
             const startCameraButton = document.getElementById('start-camera');
             const stopCameraButton = document.getElementById('stop-camera');
             const manualVerifyForm = document.getElementById('manual-verify-form');
-            const manualQrToken = document.getElementById('manual-qr-token');
+            const manualOrderInput = document.getElementById('manual-order-identifier');
             const manualVerifyButton = manualVerifyForm.querySelector('button[type="submit"]');
             const clearScanButton = document.getElementById('clear-scan');
             const csrfToken = <?= json_encode($csrfToken, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -85,6 +86,7 @@ $csrfToken = cvcarts_csrf_token();
             let scanning = false;
             let cameraRunning = false;
             let currentToken = '';
+            let currentOrderIdentifier = '';
             let lastScannedToken = '';
             let currentOrderClaimable = false;
             let claimConfirmationPending = false;
@@ -158,15 +160,25 @@ $csrfToken = cvcarts_csrf_token();
                 stopCameraButton.disabled = busy || !cameraRunning;
             }
 
-            function showMessage(message, isError) {
+            function showMessage(message, severity) {
+                const state = severity === true ? 'error' : (severity === false ? 'success' : (severity || 'success'));
                 statusDiv.textContent = message;
-                statusDiv.classList.toggle('error', Boolean(isError));
-                statusDiv.classList.toggle('warning', !isError);
+                statusDiv.classList.toggle('error', state === 'error');
+                statusDiv.classList.toggle('warning', state === 'warning');
+                statusDiv.classList.toggle('success', state === 'success');
                 resultMessage.textContent = message;
             }
 
             function sendAction(action, confirmHandover) {
-                const payload = { action: action, qr_token: currentToken };
+                const manual = currentOrderIdentifier !== '';
+                const payload = {
+                    action: manual ? (action === 'claim' ? 'claim_manual' : 'verify_manual') : action
+                };
+                if (manual) {
+                    payload.order_identifier = currentOrderIdentifier;
+                } else {
+                    payload.qr_token = currentToken;
+                }
                 if (confirmHandover === true) {
                     payload.confirm_handover = true;
                 }
@@ -178,7 +190,7 @@ $csrfToken = cvcarts_csrf_token();
                     return response.json().catch(function () {
                         return { message: 'Unexpected server response.' };
                     }).then(function (data) {
-                        return { ok: response.ok, data: data };
+                        return { ok: response.ok, status: response.status, data: data };
                     });
                 });
             }
@@ -187,7 +199,9 @@ $csrfToken = cvcarts_csrf_token();
                 if (scanning || !decodedText || decodedText === lastScannedToken) return;
                 scanning = true;
                 currentToken = String(decodedText).trim();
+                currentOrderIdentifier = '';
                 lastScannedToken = currentToken;
+                manualOrderInput.value = '';
                 currentOrderClaimable = false;
                 setRequestBusy(true);
                 resultPanel.hidden = true;
@@ -200,7 +214,8 @@ $csrfToken = cvcarts_csrf_token();
                 })
                     .then(function (result) {
                         window.closeAlert();
-                        showMessage(result.data.message || 'Unable to verify this order.', !result.ok);
+                        const message = result.data.message || 'Unable to verify this order.';
+                        showMessage(message, !result.ok ? 'error' : (result.data.claimable === true ? 'success' : 'warning'));
                         if (!result.ok) {
                             window.showError('Order verification failed', result.data.message || 'The QR code could not be verified.');
                         } else if (result.data.claimable !== true) {
@@ -214,7 +229,7 @@ $csrfToken = cvcarts_csrf_token();
                     })
                     .catch(function () {
                         window.closeAlert();
-                        showMessage('Connection error. Please scan the receipt again.', true);
+                        showMessage('Connection error. Please scan the receipt again.', 'error');
                         window.showError('Connection error', 'The order could not be verified. Please try scanning again.');
                         lastScannedToken = '';
                     })
@@ -226,19 +241,19 @@ $csrfToken = cvcarts_csrf_token();
             }
 
             claimButton.addEventListener('click', function () {
-                if (!currentToken || claimButton.disabled || scanning || claimConfirmationPending) return;
+                if ((!currentToken && !currentOrderIdentifier) || claimButton.disabled || scanning || claimConfirmationPending) return;
                 claimConfirmationPending = true;
                 claimButton.disabled = true;
                 setRequestBusy(true);
                 window.cvcartsConfirm('Confirm that you have physically handed this order to the student? This will record the received date and time.', {
                     title: 'Confirm physical handover',
-                    confirmLabel: 'Confirm Claim',
+                    confirmLabel: 'Confirm & Mark as Claimed',
                     cancelLabel: 'Cancel',
                     type: 'warning',
                     opener: claimButton
                 }).then(function (confirmed) {
                     claimConfirmationPending = false;
-                    if (!confirmed || !currentToken || scanning) {
+                    if (!confirmed || (!currentToken && !currentOrderIdentifier) || scanning) {
                         claimButton.disabled = claimButton.hidden || !currentOrderClaimable;
                         setRequestBusy(false);
                         return;
@@ -264,7 +279,7 @@ $csrfToken = cvcarts_csrf_token();
                         })
                         .catch(function () {
                             window.closeAlert();
-                            showMessage('Connection error. Please try claiming the order again.', true);
+                            showMessage('Connection error. Please try claiming the order again.', 'error');
                             window.showError('Connection error', 'The order could not be claimed. Please try again.');
                             claimButton.disabled = false;
                         })
@@ -282,28 +297,80 @@ $csrfToken = cvcarts_csrf_token();
                 startCamera();
             });
 
+            manualOrderInput.addEventListener('input', function () {
+                const normalized = manualOrderInput.value.trim().toUpperCase();
+                if (manualOrderInput.value !== normalized) {
+                    manualOrderInput.value = normalized;
+                }
+                if (normalized !== currentOrderIdentifier) {
+                    currentOrderIdentifier = '';
+                    currentToken = '';
+                    lastScannedToken = '';
+                    currentOrderClaimable = false;
+                    resultPanel.hidden = true;
+                    claimButton.hidden = true;
+                    claimButton.disabled = true;
+                }
+            });
+
             manualVerifyForm.addEventListener('submit', function (event) {
                 event.preventDefault();
                 if (scanning) return;
-                const token = manualQrToken.value.trim();
-                if (!/^(?:[a-f0-9]{32}|[a-f0-9]{64})$/i.test(token)) {
-                    showMessage('INVALID QR CODE', true);
+                const identifier = manualOrderInput.value.trim().toUpperCase();
+                manualOrderInput.value = identifier;
+                if (!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(identifier)) {
+                    showMessage('Enter a valid Order Number or Order ID.', 'error');
                     return;
                 }
-                onScanSuccess(token);
+
+                currentOrderIdentifier = identifier;
+                currentToken = '';
+                currentOrderClaimable = false;
+                scanning = true;
+                setRequestBusy(true);
+                resultPanel.hidden = true;
+                claimButton.hidden = true;
+                showMessage('Checking Order Number and status...', 'success');
+                window.showLoading('Verifying order', 'Checking the Order Number against the latest order status.');
+
+                stopCamera().then(function () {
+                    return sendAction('verify');
+                }).then(function (result) {
+                    window.closeAlert();
+                    const message = result.data.message || 'Unable to verify this order.';
+                    if (!result.ok) {
+                        const statusType = result.status === 409 ? 'warning' : 'error';
+                        showMessage(message, statusType);
+                        resultPanel.hidden = true;
+                        claimButton.hidden = true;
+                        currentOrderClaimable = false;
+                        return;
+                    }
+
+                    showMessage(message, 'success');
+                    showOrder(result.data.order, result.data.claimable === true);
+                }).catch(function () {
+                    window.closeAlert();
+                    showMessage('Connection error. Please check the Order Number and try again.', 'error');
+                }).finally(function () {
+                    scanning = false;
+                    setRequestBusy(false);
+                    claimButton.disabled = claimButton.hidden || !currentOrderClaimable;
+                });
             });
 
             clearScanButton.addEventListener('click', function () {
                 if (scanning) return;
                 resetScanState();
-                showMessage('Scan cleared. Ready to verify an order.', false);
+                showMessage('Ready to scan a pickup QR code.', 'success');
             });
 
             function resetScanState() {
                 currentToken = '';
+                currentOrderIdentifier = '';
                 lastScannedToken = '';
                 currentOrderClaimable = false;
-                manualQrToken.value = '';
+                manualOrderInput.value = '';
                 resultPanel.hidden = true;
                 claimButton.hidden = true;
                 claimButton.disabled = true;
@@ -329,7 +396,7 @@ $csrfToken = cvcarts_csrf_token();
 
             function startCamera() {
                 if (!cameraSupported) {
-                    showMessage('Camera scanning is unavailable because the scanner library did not load. Use manual verification below.', true);
+                    showMessage('Camera scanning is unavailable because the scanner library did not load. Use manual verification below.', 'error');
                     startCameraButton.disabled = true;
                     return;
                 }
@@ -341,7 +408,7 @@ $csrfToken = cvcarts_csrf_token();
                     } catch (error) {
                         cameraSupported = false;
                         startCameraButton.disabled = true;
-                        showMessage('The camera scanner could not start. Use manual verification below.', true);
+                        showMessage('The camera scanner could not start. Use manual verification below.', 'error');
                         return;
                     }
                 }
@@ -356,7 +423,7 @@ $csrfToken = cvcarts_csrf_token();
                     showMessage('Camera ready. Point it at a pickup QR code.', false);
                 }).catch(function () {
                     setCameraControls(false);
-                    showMessage('Camera permission is required; use localhost or HTTPS.', true);
+                    showMessage('Camera permission is required; use localhost or HTTPS.', 'error');
                 });
             }
 
@@ -375,14 +442,14 @@ $csrfToken = cvcarts_csrf_token();
                     })
                     .catch(function () {
                         setCameraControls(false);
-                        showMessage('The camera could not be stopped cleanly. Reload this page before scanning again.', true);
+                        showMessage('The camera could not be stopped cleanly. Reload this page before scanning again.', 'error');
                     });
             }
 
             startCameraButton.addEventListener('click', startCamera);
             stopCameraButton.addEventListener('click', function () {
                 stopCamera().then(function () {
-                    showMessage('Camera stopped. You can still verify a QR token manually.', false);
+                    showMessage('Camera stopped. You can still verify an order number manually.', 'success');
                 });
             });
             window.addEventListener('beforeunload', function () {
@@ -394,9 +461,9 @@ $csrfToken = cvcarts_csrf_token();
             setCameraControls(false);
             if (!cameraSupported) {
                 startCameraButton.disabled = true;
-                showMessage('Camera scanning is unavailable. Use manual verification below.', true);
+                showMessage('Camera scanning is unavailable. Use manual verification below.', 'error');
             } else {
-                showMessage('Ready to scan a pickup QR code.', false);
+                showMessage('Ready to scan a pickup QR code.', 'success');
             }
         }());
     </script>

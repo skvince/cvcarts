@@ -82,23 +82,19 @@ $flashes = cvcarts_get_flash();
     <title>CVCarts | Reset Password</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/reset-password.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/reset-password.css') . '?v=' . filemtime(__DIR__ . '/../assets/css/auth/reset-password.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/auth-experience.css?v=' . filemtime(__DIR__ . '/../assets/css/auth/auth-experience.css'))); ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="auth-page">
     <div class="ambient-glow glow-one"></div><div class="ambient-glow glow-two"></div><div class="ambient-glow glow-three"></div>
-    <main class="forgot-container">
-        <section class="brand-section">
-            <div class="brand-top"><span class="brand-indicator"></span><span>CAMPUS VIA CART</span></div>
-            <img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="CVCarts Logo" class="brand-logo">
-            <div class="brand-content"><p class="brand-eyebrow">SECURE ACCOUNT ACCESS</p><h2>A Safe Return,<br><span>Just One Step Away.</span></h2><p class="brand-description">Choose a strong new password to secure your account.</p></div>
-            <div class="brand-bottom"><div class="bottom-line"></div><span>SHOP SMART. LIVE EASY.</span></div>
-        </section>
+    <main class="forgot-container auth-layout">
+        <?php require __DIR__ . '/../includes/auth-brand.php'; ?>
         <section class="forgot-card">
             <div class="card-glow"></div><div class="card-content">
-                <div class="card-header"><div class="welcome-icon">✦</div><p class="welcome-label">PASSWORD RESET</p><h1>Create New Password</h1><p class="subtitle">Your reset link is valid for 15 minutes and can only be used once.</p></div>
+                <div class="card-header"><div class="welcome-icon" aria-hidden="true"><i class="bi bi-shield-lock"></i></div><p class="welcome-label">PASSWORD RESET</p><h1>Create New Password</h1><p class="subtitle">Your reset link is valid for 15 minutes and can only be used once.</p></div>
                 <?php foreach ($flashes as $flash): ?><div class="form-alert form-alert-success" role="status"><?php echo cvcarts_h($flash['message']); ?></div><?php endforeach; ?>
                 <?php if ($error !== ''): ?><div class="form-alert" role="alert"><?php echo cvcarts_h($error); ?></div><?php endif; ?>
                 <?php if ($tokenValid): ?>
@@ -117,5 +113,6 @@ $flashes = cvcarts_get_flash();
             </div>
         </section>
     </main>
+    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/auth-carousel.js?v=' . filemtime(__DIR__ . '/../assets/js/auth-carousel.js'))); ?>" defer></script>
 </body>
 </html>

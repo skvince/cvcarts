@@ -31,6 +31,38 @@ function cvcarts_qr_order_query(PDO $db, string $token): ?array {
     return $order ?: null;
 }
 
+function cvcarts_qr_manual_order_query(PDO $db, string $identifier): ?array {
+    $idCondition = ctype_digit($identifier) ? ' OR o.id = :order_id' : '';
+    $query = $db->prepare(
+        'SELECT o.id, o.user_id, o.reference_number, o.total_amount, o.payment_method, o.payment_status,
+            o.order_status, o.created_at, o.verified_at, o.claim_date, o.claimed_by_admin_id,
+            u.first_name AS student_first_name, u.last_name AS student_last_name, u.email AS student_email,
+            admin.first_name AS admin_first_name, admin.last_name AS admin_last_name
+         FROM orders o
+         INNER JOIN users u ON u.id = o.user_id
+         LEFT JOIN users admin ON admin.id = o.claimed_by_admin_id
+         WHERE o.reference_number = :order_reference' . $idCondition . '
+         LIMIT 1' . ($db->inTransaction() ? ' FOR UPDATE' : '')
+    );
+    $parameters = ['order_reference' => $identifier];
+    if (ctype_digit($identifier)) {
+        $parameters['order_id'] = (int)$identifier;
+    }
+    $query->execute($parameters);
+    $order = $query->fetch(PDO::FETCH_ASSOC);
+    return $order ?: null;
+}
+
+function cvcarts_qr_manual_unavailable_message(array $order): string {
+    if ($order['order_status'] !== 'Ready to Claim') {
+        return "Cannot verify Order #{$order['reference_number']}. Current status is '{$order['order_status']}' — only 'Ready to Claim' orders can be claimed.";
+    }
+    if ($order['payment_status'] !== 'Paid') {
+        return "Cannot verify Order #{$order['reference_number']}. Payment is not verified; only paid 'Ready to Claim' orders can be claimed.";
+    }
+    return "Cannot verify Order #{$order['reference_number']}. This order has already been claimed.";
+}
+
 function cvcarts_qr_order_details(PDO $db, array $order): array {
     $itemsQuery = $db->prepare(
         'SELECT oi.quantity, oi.selected_size, oi.unit_price, p.name
@@ -89,26 +121,48 @@ if (!is_array($payload)) {
     cvcarts_qr_response(400, 'The request body must be valid JSON.');
 }
 $action = isset($payload['action']) && is_string($payload['action']) ? $payload['action'] : 'verify';
+$manualAction = in_array($action, ['verify_manual', 'claim_manual'], true);
+$claimAction = in_array($action, ['claim', 'claim_manual'], true);
 $qrToken = isset($payload['qr_token']) && is_string($payload['qr_token'])
     ? strtolower(trim($payload['qr_token']))
     : '';
-if (!in_array($action, ['verify', 'claim'], true)) {
+if (!in_array($action, ['verify', 'claim', 'verify_manual', 'claim_manual'], true)) {
     cvcarts_qr_response(400, 'Choose a valid QR scanner action.');
 }
-if ($action === 'claim' && ($payload['confirm_handover'] ?? null) !== true) {
+if ($claimAction && ($payload['confirm_handover'] ?? null) !== true) {
     cvcarts_qr_response(422, 'Administrator confirmation of physical handover is required.');
 }
-if (!preg_match('/^(?:[a-f0-9]{32}|[a-f0-9]{64})$/', $qrToken)) {
+if ($manualAction) {
+    $orderIdentifier = isset($payload['order_identifier']) && is_string($payload['order_identifier'])
+        ? strtoupper(trim($payload['order_identifier']))
+        : '';
+    if (!preg_match('/^[A-Z0-9][A-Z0-9_-]{0,63}$/', $orderIdentifier)) {
+        cvcarts_qr_response(422, 'Enter a valid Order Number or Order ID.');
+    }
+} elseif (!preg_match('/^(?:[a-f0-9]{32}|[a-f0-9]{64})$/', $qrToken)) {
     cvcarts_qr_response(422, 'INVALID QR CODE');
 }
 
 $db = cvcarts_db();
-if ($action === 'verify') {
-    $order = cvcarts_qr_order_query($db, $qrToken);
+if (in_array($action, ['verify', 'verify_manual'], true)) {
+    $order = $manualAction
+        ? cvcarts_qr_manual_order_query($db, $orderIdentifier)
+        : cvcarts_qr_order_query($db, $qrToken);
     if (!$order) {
-        cvcarts_qr_response(404, 'INVALID QR CODE');
+        cvcarts_qr_response(404, $manualAction
+            ? 'Order not found. Please check the Order Number and try again.'
+            : 'INVALID QR CODE');
     }
     $state = cvcarts_order_claim_state($order);
+    if ($manualAction && !$state['claimable']) {
+        cvcarts_qr_response(409, cvcarts_qr_manual_unavailable_message($order), [
+            'order' => cvcarts_qr_order_details($db, $order),
+            'claimable' => false,
+        ]);
+    }
+    if ($manualAction) {
+        $state['message'] = "Order #{$order['reference_number']} verified and ready for release.";
+    }
     cvcarts_qr_response(200, $state['message'], [
         'order' => cvcarts_qr_order_details($db, $order),
         'claimable' => $state['claimable'],
@@ -117,16 +171,21 @@ if ($action === 'verify') {
 
 $db->beginTransaction();
 try {
-    $order = cvcarts_qr_order_query($db, $qrToken);
+    $order = $manualAction
+        ? cvcarts_qr_manual_order_query($db, $orderIdentifier)
+        : cvcarts_qr_order_query($db, $qrToken);
     if (!$order) {
         $db->rollBack();
-        cvcarts_qr_response(404, 'INVALID QR CODE');
+        cvcarts_qr_response(404, $manualAction
+            ? 'Order not found. Please check the Order Number and try again.'
+            : 'INVALID QR CODE');
     }
     $state = cvcarts_order_claim_state($order);
     if (!$state['claimable']) {
         $details = cvcarts_qr_order_details($db, $order);
         $db->rollBack();
-        cvcarts_qr_response(409, $state['message'], ['order' => $details, 'claimable' => false]);
+        $message = $manualAction ? cvcarts_qr_manual_unavailable_message($order) : $state['message'];
+        cvcarts_qr_response(409, $message, ['order' => $details, 'claimable' => false]);
     }
 
     $claim = $db->prepare("UPDATE orders SET order_status = 'Claimed', claim_date = NOW(), claimed_by_admin_id = :admin_id, updated_at = NOW() WHERE id = :id AND payment_status = 'Paid' AND order_status = 'Ready to Claim' AND claim_date IS NULL AND cancelled_at IS NULL");

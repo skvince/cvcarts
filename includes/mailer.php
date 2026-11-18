@@ -2,13 +2,13 @@
 
 function cvcarts_smtp_config(): array {
     return [
-        'host' => trim((string)(getenv('SMTP_HOST') ?: 'smtp.gmail.com')),
+        'host' => trim((string)(getenv('SMTP_HOST') ?: '')),
         'port' => (int)(getenv('SMTP_PORT') ?: 587),
         'auth' => filter_var((string)(getenv('SMTP_AUTH') ?: 'true'), FILTER_VALIDATE_BOOLEAN),
-        'username' => trim((string)(getenv('SMTP_USERNAME') ?: 'cvcarts40@gmail.com')),
+        'username' => trim((string)(getenv('SMTP_USERNAME') ?: '')),
         'password' => preg_replace('/\s+/', '', (string)getenv('SMTP_PASSWORD')) ?? '',
         'encryption' => strtolower(trim((string)(getenv('SMTP_ENCRYPTION') ?: 'tls'))),
-        'from_address' => trim((string)(getenv('MAIL_FROM_ADDRESS') ?: 'cvcarts40@gmail.com')),
+        'from_address' => trim((string)(getenv('MAIL_FROM_ADDRESS') ?: '')),
         'from_name' => trim(trim((string)(getenv('MAIL_FROM_NAME') ?: 'CVCarts E-Commerce Team'), "\"'")),
     ];
 }
@@ -20,28 +20,11 @@ function cvcarts_smtp_configuration_error(array $config): ?string {
     if ($config['port'] < 1 || $config['port'] > 65535) {
         return 'SMTP_PORT must be between 1 and 65535.';
     }
-    if (!$config['auth']) {
-        return 'SMTP_AUTH must be enabled for Gmail SMTP.';
-    }
     if (!in_array($config['encryption'], ['tls', 'ssl', 'none'], true)) {
         return 'SMTP_ENCRYPTION must be tls, ssl, or none.';
     }
-    if ($config['username'] === '' || $config['password'] === '') {
-        return 'SMTP_USERNAME and SMTP_PASSWORD are required. Use the authorized Gmail account and its App Password.';
-    }
-    if ($config['from_address'] !== 'cvcarts40@gmail.com') {
-        return 'MAIL_FROM_ADDRESS must be cvcarts40@gmail.com.';
-    }
-    if (strtolower($config['host']) === 'smtp.gmail.com') {
-        if ($config['port'] !== 587 || $config['encryption'] !== 'tls') {
-            return 'Gmail SMTP must use port 587 with TLS.';
-        }
-        if ($config['username'] !== 'cvcarts40@gmail.com') {
-            return 'Gmail SMTP_USERNAME must be cvcarts40@gmail.com.';
-        }
-        if (strlen($config['password']) !== 16) {
-            return 'SMTP_PASSWORD must be the 16-character Gmail App Password, with spaces omitted.';
-        }
+    if ($config['auth'] && ($config['username'] === '' || $config['password'] === '')) {
+        return 'SMTP_USERNAME and SMTP_PASSWORD are required when SMTP_AUTH=true.';
     }
     if (!filter_var($config['from_address'], FILTER_VALIDATE_EMAIL)) {
         return 'MAIL_FROM_ADDRESS must be a valid email address.';
@@ -71,7 +54,7 @@ function cvcarts_test_smtp_connection(): array {
         $mailer->Host = $config['host'];
         $mailer->Port = $config['port'];
         $mailer->Timeout = 10;
-        $mailer->SMTPAuth = true;
+        $mailer->SMTPAuth = $config['auth'];
         $mailer->Username = $config['username'];
         $mailer->Password = $config['password'];
 
@@ -137,7 +120,7 @@ function cvcarts_send_mail(string $recipient, string $recipientName, string $sub
         $mailer->isSMTP();
         $mailer->Host = $config['host'];
         $mailer->Port = $config['port'];
-        $mailer->SMTPAuth = true;
+        $mailer->SMTPAuth = $config['auth'];
         $mailer->Username = $config['username'];
         $mailer->Password = $config['password'];
 
@@ -232,4 +215,14 @@ function cvcarts_send_admin_otp_email(array $user, string $otp): array {
         . '<p>This code expires in 10 minutes and can be used once. If you did not request this, please ignore this email.</p>'
         . '<p>CSCQC E-Commerce Team</p>';
     return cvcarts_send_mail($user['email'], $user['first_name'], 'CSCQC E-Commerce Admin Recovery Code', $html, 'admin_security_otp');
+}
+
+function cvcarts_send_student_otp_email(array $user, string $otp): array {
+    $name = htmlspecialchars($user['first_name'], ENT_QUOTES, 'UTF-8');
+    $html = '<p>Hello ' . $name . ',</p>'
+        . '<p>Use this one-time code to verify your student account recovery request:</p>'
+        . '<p style="font-size:28px;font-weight:700;letter-spacing:6px;color:#103d2b;">' . htmlspecialchars($otp, ENT_QUOTES, 'UTF-8') . '</p>'
+        . '<p>This code expires in 10 minutes and can be used once. If you did not request this, please ignore this email.</p>'
+        . '<p>CSCQC E-Commerce Team</p>';
+    return cvcarts_send_mail($user['email'], $user['first_name'], 'CSCQC E-Commerce Student Recovery Code', $html, 'student_security_otp');
 }
