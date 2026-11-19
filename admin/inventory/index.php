@@ -311,8 +311,11 @@ $flashes = cvcarts_get_flash();
             <section class="panel inventory-filter-panel" aria-label="Inventory search and filters">
                 <form class="filter-form" data-filter-form method="get" action="<?php echo cvcarts_h(cvcarts_url('/admin/inventory/index.php')); ?>">
                     <div class="inventory-filter-field inventory-search-field">
-                        <label class="form-label" for="toolbar-search">Search products</label>
-                        <input class="form-control" id="toolbar-search" type="search" name="search" value="<?php echo cvcarts_h($search); ?>" placeholder="Product name, category, or description">
+                        <label class="form-label" for="toolbar-search">Search</label>
+                        <div class="search-input-wrap">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                            <input class="form-control" id="toolbar-search" type="search" name="search" value="<?php echo cvcarts_h($search); ?>" placeholder="Search">
+                        </div>
                     </div>
                     <div class="inventory-filter-field">
                         <label class="form-label" for="toolbar-category">Category</label>

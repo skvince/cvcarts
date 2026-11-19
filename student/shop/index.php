@@ -179,7 +179,7 @@ $flashes = cvcarts_get_flash();
             <?php endforeach; ?>
 
             <form method="get" class="filter-form" data-filter-form>
-                <label>Search<input class="form-control" type="search" name="search" value="<?php echo cvcarts_h($search); ?>" placeholder="Product, category, or keyword"></label>
+                <label>Search<span class="search-input-wrap"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" name="search" value="<?php echo cvcarts_h($search); ?>" placeholder="Search"></span></label>
                 <label>Category<select class="select-control" name="category"><option value="">All categories</option><?php foreach ($categories as $availableCategory): ?><option value="<?php echo cvcarts_h($availableCategory); ?>" <?php echo $category === $availableCategory ? 'selected' : ''; ?>><?php echo cvcarts_h($availableCategory); ?></option><?php endforeach; ?></select></label>
                 <label>Availability<select class="select-control" name="availability"><option value="">All</option><option value="available" <?php echo $availability === 'available' ? 'selected' : ''; ?>>In stock</option><option value="out_of_stock" <?php echo $availability === 'out_of_stock' ? 'selected' : ''; ?>>Out of stock</option></select></label>
                 <label>Product type<select class="select-control" name="size_type"><option value="">All product types</option><option value="with_sizes" <?php echo $sizeFilter === 'with_sizes' ? 'selected' : ''; ?>>Size-based</option><option value="without_sizes" <?php echo $sizeFilter === 'without_sizes' ? 'selected' : ''; ?>>Regular stock</option></select></label>

@@ -134,7 +134,7 @@ $flashes = cvcarts_get_flash();
             <?php foreach ($flashes as $flash): ?><div class="flash-message <?= $flash['type'] === 'error' ? 'error' : ($flash['type'] === 'warning' ? 'warning' : '') ?>" data-app-alert="true" data-alert-type="<?= cvcarts_h($flash['type']) ?>" data-alert-title="<?= $flash['type'] === 'error' ? 'Something Went Wrong' : ($flash['type'] === 'warning' ? 'Warning' : 'Success') ?>" role="status"><?= cvcarts_h($flash['message']) ?></div><?php endforeach; ?>
             <section class="panel">
                 <form class="filter-form" data-filter-form method="get" action="<?= cvcarts_h(cvcarts_url($route)) ?>">
-                    <label>Search<input class="form-control" type="search" name="q" value="<?= cvcarts_h($search) ?>" placeholder="Name or school email"></label>
+                    <label>Search<span class="search-input-wrap"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" name="q" value="<?= cvcarts_h($search) ?>" placeholder="Search"></span></label>
                     <label>Account status<select class="select-control" name="status"><option value="">All statuses</option>
                         <?php foreach (['active', 'suspended', 'pending_verification'] as $status): ?><option value="<?= cvcarts_h($status) ?>" <?= $statusFilter === $status ? 'selected' : '' ?>><?= cvcarts_h(ucwords(str_replace('_', ' ', $status))) ?></option><?php endforeach; ?>
                     </select></label>

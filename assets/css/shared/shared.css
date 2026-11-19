@@ -850,6 +850,33 @@ tbody tr:hover {
     margin-top: 5px;
 }
 
+.search-input-wrap {
+    position: relative;
+    display: block;
+    min-width: 0;
+}
+
+.filter-form label .search-input-wrap {
+    margin-top: 5px;
+}
+
+.search-input-wrap .bi-search {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    z-index: 1;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.search-input-wrap input[type="search"] {
+    margin-top: 0;
+    padding-left: 36px;
+}
+
 .filter-actions {
     display: flex;
     grid-column: 1 / -1;

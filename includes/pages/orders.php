@@ -451,7 +451,7 @@ $flashes = cvcarts_get_flash();
 
 <section class="panel">
     <form class="filter-form" data-filter-form method="get" action="<?= cvcarts_h(cvcarts_url($route)) ?>">
-        <label>Search<input class="form-control" type="search" name="q" value="<?= cvcarts_h($search) ?>" placeholder="<?= $ordersReady ? 'Order number, student, or email' : ($isAdmin ? 'Order number or student' : 'Order number or email') ?>"></label>
+        <label>Search<span class="search-input-wrap"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" name="q" value="<?= cvcarts_h($search) ?>" placeholder="Search"></span></label>
         <label><?= $ordersHistory ? 'Final order status' : 'Order status' ?><select class="select-control" name="status"><option value="">All statuses</option>
             <?php foreach ($statusOptions as $status): ?>
                 <option value="<?= cvcarts_h($status) ?>" <?= $statusFilter === $status ? 'selected' : '' ?>><?= cvcarts_h($status) ?></option>
