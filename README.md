@@ -333,7 +333,7 @@ Cvcarts/
 | `composer.json` | Declares the application package and PHPMailer dependency (`phpmailer/phpmailer`). Change dependencies here, then run Composer to update `composer.lock` and `vendor/`. |
 | `composer.lock` | Pins the installed dependency version (the current installed PHPMailer metadata reports v6.12.0). Normally updated by Composer, not edited by hand. |
 | `index.php` | Entry router: loads shared auth/session code, then sends a signed-in user to the role's dashboard or an unsigned user to login. |
-| `config/app.php` | Parses the root `.env` with `parse_ini_file`, populates environment variables not already set by the process, and defines `CVCARTS_BASE_URL`, `CVCARTS_BASE_PATH`, and `CVCARTS_ADMIN_EMAIL`. Change URL/environment loading here only when changing the configuration model. |
+| `config/app.php` | Parses the root `.env` with `parse_ini_file`, populates environment variables not already set by the process, and provides `cvcarts_env()` to read values from the process environment, `$_ENV`, or `$_SERVER`. It also defines `CVCARTS_BASE_URL`, `CVCARTS_BASE_PATH`, and `CVCARTS_ADMIN_EMAIL`. Change URL/environment loading here only when changing the configuration model. |
 | `config/database.php` | Reads `DB_*`, creates PDO for MySQL with exceptions, associative fetches, and native prepares. On an initial connection exception, it attempts `database/setup.php` and reconnects. `require_database_connection()` returns a 503 setup message when no connection is available. |
 | `config/.htaccess` | Denies direct browser access to the config folder. |
 

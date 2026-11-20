@@ -67,7 +67,7 @@ function cvcarts_password_is_strong(string $password): bool {
 }
 
 function cvcarts_rate_limit_key(): string {
-    $appKey = getenv('APP_KEY');
+    $appKey = cvcarts_env('APP_KEY');
     if (is_string($appKey) && strlen($appKey) >= 32) {
         return $appKey;
     }
@@ -374,7 +374,7 @@ function cvcarts_order_qr_nonce(): string {
 }
 
 function cvcarts_order_qr_token(int $orderId, string $nonce): string {
-    $appKey = getenv('APP_KEY');
+    $appKey = cvcarts_env('APP_KEY');
     if ($orderId < 1 || !preg_match('/^[a-f0-9]{32}$/', $nonce)) {
         throw new InvalidArgumentException('A valid order ID and QR nonce are required.');
     }

@@ -5,6 +5,21 @@ ini_set('display_startup_errors', '0');
 ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
+function cvcarts_env(string $name, string $default = ''): string {
+    $value = getenv($name);
+    if ($value !== false && $value !== '') {
+        return (string)$value;
+    }
+
+    foreach ([$_ENV, $_SERVER] as $source) {
+        if (isset($source[$name]) && is_scalar($source[$name]) && (string)$source[$name] !== '') {
+            return (string)$source[$name];
+        }
+    }
+
+    return $default;
+}
+
 $envPath = dirname(__DIR__) . '/.env';
 if (is_file($envPath)) {
     $environment = parse_ini_file($envPath, false, INI_SCANNER_RAW);
@@ -14,8 +29,7 @@ if (is_file($envPath)) {
     }
 
     foreach ($environment as $name => $value) {
-        $existing = getenv($name);
-        if ($existing === false || $existing === '') {
+        if (cvcarts_env((string)$name) === '') {
             putenv($name . '=' . $value);
             $_ENV[$name] = $value;
             $_SERVER[$name] = $value;
@@ -23,7 +37,7 @@ if (is_file($envPath)) {
     }
 }
 
-$appEnv = strtolower(trim((string)(getenv('APP_ENV') ?: 'production')));
+$appEnv = strtolower(trim(cvcarts_env('APP_ENV', 'production')));
 $isProduction = $appEnv !== 'development' && $appEnv !== 'local';
 ini_set('display_errors', $isProduction ? '0' : '1');
 ini_set('display_startup_errors', $isProduction ? '0' : '1');
@@ -33,7 +47,7 @@ if (!defined('CVCARTS_APP_ENV')) {
 }
 
 if (!defined('CVCARTS_BASE_URL')) {
-    $configuredBaseUrl = trim((string)(getenv('APP_BASE_URL') ?: ''));
+    $configuredBaseUrl = trim(cvcarts_env('APP_BASE_URL'));
     $configuredBaseUrl = rtrim($configuredBaseUrl, '/');
     if ($configuredBaseUrl === '' || preg_match('/^https?:\/\/(?:localhost|127\.0\.0\.1)(?:[:\/]|$)/i', $configuredBaseUrl) === 1) {
         $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
@@ -55,7 +69,7 @@ if (!defined('CVCARTS_BASE_URL')) {
 }
 
 if (!defined('CVCARTS_ADMIN_EMAIL')) {
-    define('CVCARTS_ADMIN_EMAIL', strtolower(trim((string)(getenv('ADMIN_EMAIL') ?: ''))));
+    define('CVCARTS_ADMIN_EMAIL', strtolower(trim(cvcarts_env('ADMIN_EMAIL'))));
 }
 
 if (!defined('CVCARTS_BASE_PATH')) {

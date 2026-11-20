@@ -2,14 +2,14 @@
 
 function cvcarts_smtp_config(): array {
     return [
-        'host' => trim((string)(getenv('SMTP_HOST') ?: '')),
-        'port' => (int)(getenv('SMTP_PORT') ?: 587),
-        'auth' => filter_var((string)(getenv('SMTP_AUTH') ?: 'true'), FILTER_VALIDATE_BOOLEAN),
-        'username' => trim((string)(getenv('SMTP_USERNAME') ?: '')),
-        'password' => preg_replace('/\s+/', '', (string)getenv('SMTP_PASSWORD')) ?? '',
-        'encryption' => strtolower(trim((string)(getenv('SMTP_ENCRYPTION') ?: 'tls'))),
-        'from_address' => trim((string)(getenv('MAIL_FROM_ADDRESS') ?: '')),
-        'from_name' => trim(trim((string)(getenv('MAIL_FROM_NAME') ?: 'CVCarts E-Commerce Team'), "\"'")),
+        'host' => trim(cvcarts_env('SMTP_HOST')),
+        'port' => (int)(cvcarts_env('SMTP_PORT', '587') ?: 587),
+        'auth' => filter_var(cvcarts_env('SMTP_AUTH', 'true') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+        'username' => trim(cvcarts_env('SMTP_USERNAME')),
+        'password' => preg_replace('/\s+/', '', cvcarts_env('SMTP_PASSWORD')) ?? '',
+        'encryption' => strtolower(trim(cvcarts_env('SMTP_ENCRYPTION', 'tls') ?: 'tls')),
+        'from_address' => trim(cvcarts_env('MAIL_FROM_ADDRESS')),
+        'from_name' => trim(trim(cvcarts_env('MAIL_FROM_NAME', 'CVCarts E-Commerce Team') ?: 'CVCarts E-Commerce Team', "\"'")),
     ];
 }
 

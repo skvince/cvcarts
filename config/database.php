@@ -3,10 +3,10 @@
 require_once __DIR__ . '/app.php';
 
 $pdo = null;
-$host = trim((string)(getenv('DB_HOST') ?: ''));
-$dbName = trim((string)(getenv('DB_NAME') ?: ''));
-$dbUser = trim((string)(getenv('DB_USER') ?: ''));
-$dbPass = (string)(getenv('DB_PASSWORD') ?: '');
+$host = trim(cvcarts_env('DB_HOST'));
+$dbName = trim(cvcarts_env('DB_NAME'));
+$dbUser = trim(cvcarts_env('DB_USER'));
+$dbPass = cvcarts_env('DB_PASSWORD');
 
 if (CVCARTS_APP_ENV === 'local' || CVCARTS_APP_ENV === 'development') {
     $host = $host !== '' ? $host : '127.0.0.1';

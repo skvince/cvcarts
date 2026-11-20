@@ -7,10 +7,10 @@ if (PHP_SAPI !== 'cli') {
 
 require_once __DIR__ . '/../config/app.php';
 
-$host = getenv('DB_HOST') ?: '127.0.0.1';
-$user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASSWORD') ?: '';
-$dbName = getenv('DB_NAME') ?: 'cscqc_ecommerce';
+$host = cvcarts_env('DB_HOST', '127.0.0.1') ?: '127.0.0.1';
+$user = cvcarts_env('DB_USER', 'root') ?: 'root';
+$pass = cvcarts_env('DB_PASSWORD');
+$dbName = cvcarts_env('DB_NAME', 'cscqc_ecommerce') ?: 'cscqc_ecommerce';
 
 try {
     $pdo = new PDO('mysql:host=' . $host . ';charset=utf8mb4', $user, $pass, [
