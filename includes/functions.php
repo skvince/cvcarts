@@ -66,11 +66,22 @@ function cvcarts_password_is_strong(string $password): bool {
         && preg_match('/[^A-Za-z0-9]/', $password) === 1;
 }
 
+function cvcarts_rate_limit_key(): string {
+    $appKey = getenv('APP_KEY');
+    if (is_string($appKey) && strlen($appKey) >= 32) {
+        return $appKey;
+    }
+    if (defined('CVCARTS_APP_ENV') && CVCARTS_APP_ENV !== 'local' && CVCARTS_APP_ENV !== 'development') {
+        throw new RuntimeException('APP_KEY must contain at least 32 characters in production.');
+    }
+    return 'cvcarts-local-development';
+}
+
 function cvcarts_rate_limited(string $action, string $identifier, int $identifierLimit, int $ipLimit, int $windowMinutes, bool $failuresOnly = false): bool {
     $db = cvcarts_db();
     $identifierHash = hash('sha256', strtolower(trim($identifier)));
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $ipHash = hash_hmac('sha256', $ip, getenv('APP_KEY') ?: 'cvcarts-local-development');
+    $ipHash = hash_hmac('sha256', $ip, cvcarts_rate_limit_key());
     $statusFilter = $failuresOnly ? ' AND succeeded = 0' : '';
     $sql = 'SELECT COUNT(*) FROM auth_attempts WHERE action = :action AND created_at >= DATE_SUB(NOW(), INTERVAL :window MINUTE)';
     $byIdentifier = $db->prepare($sql . ' AND identifier_hash = :key_hash' . $statusFilter);
@@ -97,7 +108,7 @@ function cvcarts_record_auth_attempt(string $action, string $identifier, bool $s
         ->execute([
             'action' => $action,
             'identifier_hash' => hash('sha256', strtolower(trim($identifier))),
-            'ip_hash' => hash_hmac('sha256', $ip, getenv('APP_KEY') ?: 'cvcarts-local-development'),
+            'ip_hash' => hash_hmac('sha256', $ip, cvcarts_rate_limit_key()),
             'succeeded' => $succeeded ? 1 : 0,
         ]);
     return (int)$db->lastInsertId();
@@ -183,8 +194,13 @@ function cvcarts_store_payment_proof(array $upload): string {
         throw new RuntimeException('Payment proof must be a JPEG, PNG, or PDF file.');
     }
 
+    $directory = __DIR__ . '/../uploads/payment-proofs';
+    if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+        throw new RuntimeException('Payment proof storage is not available. Please try again later.');
+    }
+
     $filename = bin2hex(random_bytes(16)) . $allowedMimeTypes[$mimeType];
-    $target = __DIR__ . '/../uploads/payment-proofs/' . $filename;
+    $target = $directory . '/' . $filename;
     if (!move_uploaded_file($upload['tmp_name'], $target)) {
         throw new RuntimeException('Payment proof could not be saved. Please try again.');
     }

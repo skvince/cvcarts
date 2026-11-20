@@ -11,8 +11,14 @@
 # Private payment uploads
 /uploads/payment-proofs/*
 
+# Private, data-bearing database migration export
+/database/infinityfree-migration.sql
+
 # Composer dependencies
 /vendor/
+!/vendor/
+/vendor/*
+!/vendor/.htaccess
 
 # User uploads
 /uploads/*

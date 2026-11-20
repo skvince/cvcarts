@@ -2,13 +2,16 @@ Options -Indexes
 
 RewriteEngine On
 
+# Do not serve repository metadata if it is ever uploaded by mistake.
+RewriteRule (^|/)\.git(?:/|$) - [F,L]
+
 # Upgrade public traffic to HTTPS when it is available through Apache.
 RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP:X-Forwarded-Proto} !^https$
 RewriteCond %{HTTP_HOST} !^(?:localhost|127\.0\.0\.1)(?::[0-9]+)?$
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
-<FilesMatch "(^\.env(?:\.|$)|composer\.(?:json|lock)$|.*\.sql$|(?:^|/)(?:\.git|vendor|storage)(?:/|$))">
+<FilesMatch "(^\.env(?:\.|$)|composer\.(?:json|lock)$|.*\.sql$)">
     Require all denied
 </FilesMatch>
 
@@ -17,5 +20,5 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set Strict-Transport-Security "max-age=31536000"
 </IfModule>

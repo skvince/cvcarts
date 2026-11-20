@@ -1,58 +1,54 @@
 # CVCarts Deployment Guide
 
-## 1. Prepare the host
+## 1. Prepare the hosting account
 
-1. Use PHP 8.2 or newer with `pdo_mysql`, `mysqli`, `openssl`, `mbstring`, `fileinfo`, and GD/image support as available.
-2. Use MySQL 8 or MariaDB 10.5 or newer with InnoDB and foreign keys enabled.
-3. Enable Apache `mod_rewrite` and `mod_headers`, or configure the same HTTPS/security rules in the host panel.
-4. Install Composer dependencies:
+1. In the InfinityFree control panel, select an available PHP version supported by this application (PHP 8.2 or newer) and confirm `pdo_mysql`, `fileinfo`, `mbstring`, `openssl`, and PHP sessions are enabled.
+2. Create the MySQL database in the hosting control panel. Use the exact database host, database name, username, and password shown there; the database host is not necessarily `localhost`.
+3. Use the control panel's phpMyAdmin to select the newly created database.
 
-   ```sh
-   composer install --no-dev --optimize-autoloader --no-interaction
-   ```
+InfinityFree accounts may not provide shell access or Composer. If Composer is unavailable on the account, run `composer install --no-dev --optimize-autoloader --no-interaction` on your computer and upload the resulting `vendor/` directory, including its `.htaccess`.
 
-## 2. Configure environment
+## 2. Configure the application
 
-Copy `.env.example` to `.env` outside source control and set:
+1. Copy `.env.example` to `.env` in the project root.
+2. Set `APP_ENV=production`, the exact hosted `DB_HOST`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`, and `APP_BASE_URL` to the final HTTPS URL (including a subdirectory if applicable).
+3. Set a unique random `APP_KEY` of at least 32 characters (the example recommends 64 hexadecimal characters). Configure SMTP credentials and `ADMIN_EMAIL` as well.
+4. Do not send `.env` or its secrets in chat, email, source control, or support requests. The root `.htaccess` denies direct requests for it.
 
-- `APP_ENV=production`
-- `APP_BASE_URL=https://your-domain.example` or the HTTPS subdirectory
-- `APP_KEY` to a unique 64-character random secret
-- hosted database host, name, user, and password
-- hosted SMTP settings and authorized sender
-- production administrator email
+Do not use the example values or local XAMPP credentials on the hosted site. A production database connection is deliberately refused when any database credential is missing.
 
-Do not commit `.env`, database credentials, SMTP passwords, or private uploads.
+## 3. Create or migrate the database
 
-## 3. Database
+1. Take a backup of any existing hosted database before changing it.
+2. For a new installation with no records to migrate, select the created database in phpMyAdmin and import the tracked, schema-only `database/cscqc_ecommerce.sql`.
+3. To migrate the current local users, products, carts, and orders, use the private `database/infinityfree-migration.sql` export prepared for this deployment. It contains both schema and business data, so import **only this file** into the newly created empty database (do not import the schema-only file first). It does not contain `DROP TABLE`, database-selection statements, password-reset/verification tokens, login/IP attempt logs, or delivery/realtime logs. It does contain customer and order data: upload it only to phpMyAdmin over HTTPS, do not commit/email/share it, and delete it from the computer and hosting account after the import. The file is intentionally excluded from source control.
+4. Take a backup of the source and verify the hosted database is empty before importing. If source records change after this snapshot, create a fresh protected export before the migration rather than reusing a stale file.
+5. Keep the existing `APP_KEY` when moving the same application so previously generated order QR codes remain verifiable. Keep it private. Since short-lived verification/reset tokens are intentionally omitted, pending users will need a fresh verification email and outstanding password-reset links will no longer work.
+6. The application applies outstanding versioned migrations on the first request after connecting. They are guarded by migration records; a fully migrated database is not altered on each request. Take a backup before first launch.
+7. `database/setup.php` and `database/init_admin.php` are command-line-only utilities. Do not remove that guard or make them web-accessible. Sign in with an existing migrated administrator. If there is no active administrator and the host has no CLI, provision one through a trusted, secure database-administration process using a `password_hash()` result; never insert or share a plaintext password.
 
-Back up the existing hosting database first. Import `database/cscqc_ecommerce.sql` through phpMyAdmin or MySQL CLI. Alternatively, create an empty database and run:
+## 4. Upload files
 
-```sh
-php database/setup.php
-php database/init_admin.php
-```
+Upload the application contents (not an extra enclosing project folder) into the domain's document root, typically `htdocs/`. Include `vendor/`; do not upload `.git/`, private migration exports, local backups, or private local uploads. Upload the configured `.env` only to the project root, and verify hidden `.htaccess` files are included. Upload any product images referenced by migrated rows; transfer payment proofs separately and keep them under `uploads/payment-proofs/`.
 
-The setup and migration commands must be run from CLI only.
+Use the hosting panel's normal permissions. Do not set directories to world-writable (`777`). The `uploads/` directory must be writable by PHP for image and payment-proof uploads; its `.htaccess` must remain in place to prevent script execution.
 
-## 4. Deploy files
+## 5. Production verification
 
-Upload the project with `vendor/` or run Composer on the host. Exclude local `.env`, `.git`, local backups, and private uploaded records unless intentionally migrating them.
+1. Open the HTTPS domain and confirm HTTP redirects to HTTPS.
+2. Confirm direct requests to `.env`, `composer.json`, `.sql` files, `config/`, `includes/`, `database/`, and `vendor/` are denied.
+3. Confirm the application loads and the host's PHP/MySQL logs contain no configuration or migration errors.
+4. Configure and verify SMTP delivery before enabling student registrations that require email verification.
+5. Create or verify the production administrator using the hosting provider's supported secure method, then change any temporary password immediately.
+6. Exercise registration, email verification, login/logout, session persistence, password reset, student/admin authorization, product listing and management, cart, checkout, payment-proof upload, order creation/history/status, QR claiming, receipts, and notifications on the hosted HTTPS site.
+7. Test rejection of invalid CSRF tokens, unauthorized admin/student requests, disallowed uploads, and requests to protected files and directories.
+8. Check error logs after each test and verify visitor responses never contain SQL, credentials, server paths, or stack traces.
 
-Recommended write permissions:
+## Project layout
 
-- project directories: 755
-- PHP/config files: 644
-- `uploads/`: 775 for the web-server account
-- `uploads/payment-proofs/`: 775; executable access must remain denied
-
-## 5. Verify
-
-1. Open the HTTPS domain and confirm it redirects HTTP to HTTPS.
-2. Confirm `.env`, SQL export, Composer files, `config/`, `includes/`, `database/`, and `vendor/` are denied or inaccessible.
-3. Run administrator initialization once.
-4. Sign in and change the temporary administrator password.
-5. Test student registration, email verification, login, shopping, cart, checkout, proof upload, order status, receipt, and logout.
-6. Test admin inventory, users, payment review, status changes, schedule, QR claim, sales, and settings.
-7. Run an SMTP preflight and send a real test email.
-8. Review Apache/PHP error logs and confirm visitors do not see PHP exception messages.
+- `auth/`, `student/`, `admin/`, and `api/`: authentication, customer/admin pages, and endpoints.
+- `config/` and `includes/`: runtime configuration, shared authentication, database, migrations, and workflows; direct web access is denied.
+- `database/`: CLI-only utilities and the local data export; direct web access is denied.
+- `assets/`: public static files.
+- `uploads/`: user-generated files with PHP/script execution denied.
+- `vendor/`: Composer dependencies; direct web access is denied.

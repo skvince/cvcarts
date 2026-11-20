@@ -481,6 +481,17 @@ function cvcarts_migrate_disable_legacy_admin(PDO $db): void {
 }
 
 function cvcarts_migrate_realtime_events(PDO $db): void {
+    $migrationKey = 'realtime_events_20261120_v1';
+    $db->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
+        migration_key VARCHAR(80) PRIMARY KEY,
+        applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB");
+    $check = $db->prepare('SELECT 1 FROM schema_migrations WHERE migration_key = :migration_key');
+    $check->execute(['migration_key' => $migrationKey]);
+    if ($check->fetchColumn()) {
+        return;
+    }
+
     $db->exec("CREATE TABLE IF NOT EXISTS realtime_events (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         event_type VARCHAR(64) NOT NULL,
@@ -490,9 +501,35 @@ function cvcarts_migrate_realtime_events(PDO $db): void {
         KEY realtime_events_created_idx (created_at),
         KEY realtime_events_recipient_idx (audience, recipient_user_id, id)
     ) ENGINE=InnoDB");
+    $db->prepare('INSERT IGNORE INTO schema_migrations (migration_key) VALUES (:migration_key)')
+        ->execute(['migration_key' => $migrationKey]);
 }
 
 function cvcarts_migrate(PDO $db): void {
+    $migrationKeys = [
+        'auth_security_20261115_v2',
+        'disable_legacy_seeded_admin_20261117_v1',
+        'payments_orders_20261115_v1',
+        'order_claim_qr_20261116_v1',
+        'order_verification_dates_20261117_v1',
+        'product_sizes_pickup_slots_20261116_v1',
+        'student_profile_images_20261117_v1',
+        'realtime_events_20261120_v1',
+    ];
+    $placeholders = implode(', ', array_fill(0, count($migrationKeys), '?'));
+
+    try {
+        $check = $db->prepare('SELECT COUNT(DISTINCT migration_key) FROM schema_migrations WHERE migration_key IN (' . $placeholders . ')');
+        $check->execute($migrationKeys);
+        if ((int)$check->fetchColumn() === count($migrationKeys)) {
+            return;
+        }
+    } catch (PDOException $e) {
+        if (($e->errorInfo[1] ?? null) !== 1146) {
+            throw $e;
+        }
+    }
+
     cvcarts_migrate_auth_security($db);
     cvcarts_migrate_disable_legacy_admin($db);
     cvcarts_migrate_realtime_events($db);

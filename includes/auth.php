@@ -3,9 +3,11 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.use_strict_mode', '1');
     require_once __DIR__ . '/../config/app.php';
     $sessionPath = defined('CVCARTS_BASE_PATH') && CVCARTS_BASE_PATH !== '' ? CVCARTS_BASE_PATH : '/';
+    $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+        || parse_url(CVCARTS_BASE_URL, PHP_URL_SCHEME) === 'https';
     session_set_cookie_params([
         'httponly' => true,
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'secure' => $isHttps,
         'samesite' => 'Lax',
         'path' => $sessionPath,
     ]);
