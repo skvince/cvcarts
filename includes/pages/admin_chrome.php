@@ -88,7 +88,7 @@ function cvcarts_admin_header(array $user, array $alerts = []): void {
                     </a>
                 </div>
             </details>
-            <a class="header-logout" href="<?= cvcarts_h(cvcarts_url('/auth/logout.php')) ?>" title="Log out">
+            <a class="header-logout" href="<?= cvcarts_h(cvcarts_url('/auth/logout.php')) ?>" title="Log out" aria-label="Log out">
                 <i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Log Out</span>
             </a>
         </div>

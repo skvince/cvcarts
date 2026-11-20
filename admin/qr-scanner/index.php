@@ -7,8 +7,10 @@ $alerts = cvcarts_admin_alerts(cvcarts_db());
 $csrfToken = cvcarts_csrf_token();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="admin-responsive">
 <head>
+    <?= cvcarts_favicon_tags() ?>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CVCarts | Order Claim Scanner</title>
@@ -18,7 +20,7 @@ $csrfToken = cvcarts_csrf_token();
     <link rel="stylesheet" href="<?= cvcarts_h(cvcarts_url('/assets/css/admin/qr-scanner.css')) ?>">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
-<body>
+<body class="admin-scanner-page">
     <?php cvcarts_admin_header($user, $alerts); ?>
     <div class="app-layout">
         <?php cvcarts_admin_sidebar('qr-scanner'); ?>
@@ -27,16 +29,19 @@ $csrfToken = cvcarts_csrf_token();
             <div class="claim-grid">
                 <section class="panel scanner-panel">
                     <div id="reader" aria-label="QR code camera scanner"></div>
-                    <p class="form-help">Center the QR code in the camera area. The scanner pauses after each result.</p>
+                    <p id="camera-help" class="form-help">On phones, the rear camera is preferred; computers can use a webcam. Camera access requires HTTPS and browser permission. If unavailable, scan a QR image or verify the order number manually.</p>
                     <div class="scanner-controls">
                         <button id="start-camera" class="btn" type="button">Start Scanner</button>
                         <button id="stop-camera" class="btn btn-small btn-secondary" type="button" disabled>Stop Scanner</button>
+                        <button id="switch-camera" class="btn btn-small btn-secondary" type="button" hidden disabled>Switch Camera</button>
+                        <button id="scan-image" class="btn btn-small btn-secondary" type="button">Scan QR from Photo</button>
+                        <input id="scan-image-file" type="file" accept="image/*" capture="environment" hidden aria-describedby="camera-help">
                     </div>
                     <div id="status" class="flash-message" role="status" aria-live="polite">Ready to scan a pickup QR code.</div>
                     <form id="manual-verify-form" class="form-field">
                         <label class="form-label" for="manual-order-identifier">Manual Order Verification</label>
                         <div class="form-inline"><input class="form-control" id="manual-order-identifier" type="text" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="Enter Order Number (e.g., ORD-1024)" autocomplete="off" aria-describedby="manual-order-help" required><button class="btn btn-small" type="submit">Verify Order</button></div>
-                        <small id="manual-order-help" class="form-help">Only orders marked as 'Ready to Claim' can be verified manually.</small>
+                        <small id="manual-order-help" class="form-help">Only orders marked as 'Ready to Claim' can be verified manually. The camera light turns off when you stop scanning or leave this page.</small>
                     </form>
                     <button id="scan-another" class="btn" type="button" hidden>Scan Another Order</button>
                     <button id="clear-scan" class="btn btn-small btn-secondary" type="button">Clear Scan</button>
@@ -80,11 +85,17 @@ $csrfToken = cvcarts_csrf_token();
             const manualOrderInput = document.getElementById('manual-order-identifier');
             const manualVerifyButton = manualVerifyForm.querySelector('button[type="submit"]');
             const clearScanButton = document.getElementById('clear-scan');
+            const switchCameraButton = document.getElementById('switch-camera');
+            const scanImageButton = document.getElementById('scan-image');
+            const scanImageInput = document.getElementById('scan-image-file');
             const csrfToken = <?= json_encode($csrfToken, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
             const apiUrl = <?= json_encode(cvcarts_url('/api/qr/claim.php'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
             let scanning = false;
             let cameraRunning = false;
+            let cameraStartPromise = null;
+            let cameraStopRequested = false;
+            let imageScanBusy = false;
             let currentToken = '';
             let currentOrderIdentifier = '';
             let lastScannedToken = '';
@@ -93,6 +104,8 @@ $csrfToken = cvcarts_csrf_token();
             let requestBusy = false;
             let scanner = null;
             let cameraSupported = typeof window.Html5Qrcode === 'function';
+            let cameraDevices = [];
+            let activeCameraId = '';
 
             function setText(id, value) {
                 document.getElementById(id).textContent = value || '—';
@@ -153,11 +166,13 @@ $csrfToken = cvcarts_csrf_token();
 
             function setRequestBusy(busy) {
                 requestBusy = busy;
-                manualVerifyButton.disabled = busy;
-                clearScanButton.disabled = busy;
-                scanAnotherButton.disabled = busy;
-                startCameraButton.disabled = busy || cameraRunning || !cameraSupported;
-                stopCameraButton.disabled = busy || !cameraRunning;
+                manualVerifyButton.disabled = busy || imageScanBusy;
+                clearScanButton.disabled = busy || imageScanBusy;
+                scanAnotherButton.disabled = busy || imageScanBusy;
+                startCameraButton.disabled = busy || imageScanBusy || cameraRunning || !cameraSupported;
+                stopCameraButton.disabled = busy || imageScanBusy || !cameraRunning;
+                switchCameraButton.disabled = busy || imageScanBusy || !cameraRunning || cameraDevices.length < 2;
+                scanImageButton.disabled = busy || imageScanBusy || !cameraSupported;
             }
 
             function showMessage(message, severity) {
@@ -359,6 +374,40 @@ $csrfToken = cvcarts_csrf_token();
                 });
             });
 
+            function refreshDisplayedOrder() {
+                if (scanning || requestBusy || imageScanBusy || resultPanel.hidden || (!currentToken && !currentOrderIdentifier)) {
+                    return;
+                }
+
+                scanning = true;
+                setRequestBusy(true);
+                showMessage('Refreshing order status from the latest update...', 'success');
+                sendAction('verify').then(function (result) {
+                    const message = result.data.message || 'Unable to refresh this order.';
+                    if (result.data.order) {
+                        showOrder(result.data.order, result.data.claimable === true);
+                    }
+                    showMessage(
+                        message,
+                        result.ok
+                            ? (result.data.claimable === true ? 'success' : 'warning')
+                            : (result.status === 409 ? 'warning' : 'error')
+                    );
+                }).catch(function () {
+                    showMessage('Could not refresh this order. The displayed status may be out of date.', 'warning');
+                }).finally(function () {
+                    scanning = false;
+                    setRequestBusy(false);
+                    claimButton.disabled = claimButton.hidden || !currentOrderClaimable;
+                });
+            }
+
+            window.addEventListener('cvcarts:realtime', function (event) {
+                if (event.detail && event.detail.type === 'order.updated') {
+                    refreshDisplayedOrder();
+                }
+            });
+
             clearScanButton.addEventListener('click', function () {
                 if (scanning) return;
                 resetScanState();
@@ -390,73 +439,322 @@ $csrfToken = cvcarts_csrf_token();
 
             function setCameraControls(running) {
                 cameraRunning = running;
-                startCameraButton.disabled = requestBusy || running || !cameraSupported;
-                stopCameraButton.disabled = requestBusy || !running;
+                startCameraButton.disabled = requestBusy || imageScanBusy || running || !cameraSupported;
+                stopCameraButton.disabled = requestBusy || imageScanBusy || !running;
+                switchCameraButton.hidden = cameraDevices.length < 2;
+                switchCameraButton.disabled = requestBusy || imageScanBusy || !running || cameraDevices.length < 2;
+                scanImageButton.disabled = requestBusy || imageScanBusy || !cameraSupported;
             }
 
-            function startCamera() {
+            function createScanner() {
                 if (!cameraSupported) {
-                    showMessage('Camera scanning is unavailable because the scanner library did not load. Use manual verification below.', 'error');
-                    startCameraButton.disabled = true;
-                    return;
+                    throw new Error('Scanner library unavailable');
                 }
-                if (cameraRunning) return;
-
                 if (!scanner) {
-                    try {
-                        scanner = new Html5Qrcode('reader', { verbose: false });
-                    } catch (error) {
-                        cameraSupported = false;
-                        startCameraButton.disabled = true;
-                        showMessage('The camera scanner could not start. Use manual verification below.', 'error');
-                        return;
-                    }
+                    scanner = new Html5Qrcode('reader', { verbose: false });
+                }
+                return scanner;
+            }
+
+            function stopVideoTracks() {
+                const video = document.querySelector('#reader video');
+                const stream = video && video.srcObject;
+                if (stream && typeof stream.getTracks === 'function') {
+                    stream.getTracks().forEach(function (track) {
+                        track.stop();
+                    });
+                }
+            }
+
+            function getActiveCameraId() {
+                const video = document.querySelector('#reader video');
+                const stream = video && video.srcObject;
+                if (!stream || typeof stream.getVideoTracks !== 'function') return '';
+                const track = stream.getVideoTracks()[0];
+                if (!track || typeof track.getSettings !== 'function') return '';
+                try {
+                    return track.getSettings().deviceId || '';
+                } catch (error) {
+                    return '';
+                }
+            }
+
+            function readCameraDevices() {
+                if (!cameraSupported || typeof Html5Qrcode.getCameras !== 'function') {
+                    cameraDevices = [];
+                    setCameraControls(cameraRunning);
+                    return Promise.resolve(cameraDevices);
                 }
 
-                startCameraButton.disabled = true;
-                scanner.start(
-                    { facingMode: 'environment' },
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    onScanSuccess
-                ).then(function () {
-                    setCameraControls(true);
-                    showMessage('Camera ready. Point it at a pickup QR code.', false);
+                return Html5Qrcode.getCameras().then(function (devices) {
+                    cameraDevices = Array.isArray(devices) ? devices.filter(function (device) {
+                        return device && typeof device.id === 'string';
+                    }) : [];
+                    activeCameraId = getActiveCameraId() || activeCameraId;
+                    if (!activeCameraId && cameraDevices.length) {
+                        const rearCamera = cameraDevices.find(function (device) {
+                            return /back|rear|environment/i.test(device.label || '');
+                        });
+                        activeCameraId = (rearCamera || cameraDevices[0]).id;
+                    }
+                    setCameraControls(cameraRunning);
+                    return cameraDevices;
                 }).catch(function () {
-                    setCameraControls(false);
-                    showMessage('Camera permission is required; use localhost or HTTPS.', 'error');
+                    cameraDevices = [];
+                    setCameraControls(cameraRunning);
+                    if (cameraRunning) {
+                        showMessage('Camera scanning is working, but the browser could not list other cameras to switch to.', 'warning');
+                    }
+                    return cameraDevices;
                 });
             }
 
-            function stopCamera() {
-                if (!cameraRunning || !scanner) {
+            function cameraErrorMessage(error) {
+                const detail = error && error.name ? String(error.name) : String(error || '');
+                const normalized = detail.toLowerCase();
+                if (normalized.indexOf('notallowed') !== -1 || normalized.indexOf('permission') !== -1 || normalized.indexOf('security') !== -1) {
+                    return 'Camera access was denied. Allow camera permission in your browser settings, or scan a QR image or enter the order number manually.';
+                }
+                if (normalized.indexOf('notfound') !== -1 || normalized.indexOf('devicesnotfound') !== -1 || normalized.indexOf('no camera') !== -1) {
+                    return 'No camera was detected. Scan a QR image or enter the order number manually.';
+                }
+                if (normalized.indexOf('notreadable') !== -1 || normalized.indexOf('trackstart') !== -1 || normalized.indexOf('busy') !== -1) {
+                    return 'The camera is busy in another app. Close that app and try again, or use a QR image or manual order number.';
+                }
+                return 'The camera could not start. Check browser permission and try another camera, scan a QR image, or enter the order number manually.';
+            }
+
+            function scannerConfig() {
+                return {
+                    fps: 10,
+                    qrbox: function (viewfinderWidth, viewfinderHeight) {
+                        const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.72);
+                        return { width: size, height: size };
+                    }
+                };
+            }
+
+            function startCamera(cameraId, triedFallback) {
+                if (!cameraSupported) {
+                    showMessage('The QR scanner library did not load. Scan a QR image or enter the order number manually.', 'error');
+                    return Promise.resolve();
+                }
+                const hostname = window.location.hostname;
+                const secureOrigin = window.isSecureContext === true
+                    || window.location.protocol === 'https:'
+                    || hostname === 'localhost'
+                    || hostname === '127.0.0.1'
+                    || hostname === '[::1]';
+                if (!secureOrigin) {
+                    showMessage('Camera scanning requires HTTPS (or localhost). Open the secure site, or scan a QR image or enter the order number manually.', 'error');
+                    return Promise.resolve();
+                }
+                if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                    showMessage('This browser does not provide camera access. Scan a QR image or enter the order number manually.', 'error');
+                    return Promise.resolve();
+                }
+                if (cameraRunning || cameraStartPromise) return Promise.resolve();
+
+                try {
+                    createScanner();
+                } catch (error) {
+                    showMessage('The scanner could not initialize. Scan a QR image or enter the order number manually.', 'error');
+                    return Promise.resolve();
+                }
+
+                cameraStopRequested = false;
+                startCameraButton.disabled = true;
+                const source = cameraId || { facingMode: { ideal: 'environment' } };
+                let startPromise;
+                try {
+                    startPromise = scanner.start(source, scannerConfig(), onScanSuccess);
+                } catch (error) {
+                    setCameraControls(false);
+                    showMessage(cameraErrorMessage(error), 'error');
+                    return Promise.resolve();
+                }
+                cameraStartPromise = startPromise;
+
+                const attempt = startPromise.then(function () {
+                    cameraRunning = true;
+                    activeCameraId = getActiveCameraId() || cameraId || activeCameraId;
+                    setCameraControls(true);
+                    if (cameraStopRequested) {
+                        return stopCameraNow();
+                    }
+                    showMessage('Camera ready. Point it at a pickup QR code.', 'success');
+                    return readCameraDevices();
+                }).catch(function (error) {
+                    cameraRunning = false;
+                    setCameraControls(false);
+                    if (cameraStopRequested) {
+                        return stopCameraNow();
+                    }
+                    const errorName = error && error.name ? String(error.name).toLowerCase() : String(error || '').toLowerCase();
+                    const permissionDenied = errorName.indexOf('notallowed') !== -1
+                        || errorName.indexOf('permission') !== -1
+                        || errorName.indexOf('security') !== -1;
+                    if (!permissionDenied && !cameraId && !triedFallback && typeof Html5Qrcode.getCameras === 'function') {
+                        return Html5Qrcode.getCameras().then(function (devices) {
+                            if (cameraStopRequested) {
+                                return stopCameraNow();
+                            }
+                            const available = Array.isArray(devices) ? devices.filter(function (device) {
+                                return device && typeof device.id === 'string';
+                            }) : [];
+                            if (available.length) {
+                                const rearCamera = available.find(function (device) {
+                                    return /back|rear|environment/i.test(device.label || '');
+                                });
+                                const fallbackCamera = rearCamera || available[0];
+                                cameraDevices = available;
+                                activeCameraId = fallbackCamera.id;
+                                cameraStartPromise = null;
+                                return startCamera(fallbackCamera.id, true);
+                            }
+                            showMessage('No camera was detected. Scan a QR image or enter the order number manually.', 'error');
+                        }).catch(function () {
+                            showMessage(cameraErrorMessage(error), 'error');
+                        });
+                    }
+                    showMessage(cameraErrorMessage(error), 'error');
+                }).finally(function () {
+                    if (cameraStartPromise === attempt) {
+                        cameraStartPromise = null;
+                    }
+                    setCameraControls(cameraRunning);
+                });
+
+                cameraStartPromise = attempt;
+                return attempt;
+            }
+
+            function stopCameraNow() {
+                cameraStopRequested = false;
+                if (!scanner || !cameraRunning) {
+                    stopVideoTracks();
                     setCameraControls(false);
                     return Promise.resolve();
                 }
 
-                return scanner.stop()
-                    .then(function () {
-                        if (typeof scanner.clear === 'function') {
-                            scanner.clear();
-                        }
-                        setCameraControls(false);
-                    })
-                    .catch(function () {
-                        setCameraControls(false);
-                        showMessage('The camera could not be stopped cleanly. Reload this page before scanning again.', 'error');
-                    });
+                return scanner.stop().then(function () {
+                    cameraRunning = false;
+                    stopVideoTracks();
+                    if (typeof scanner.clear === 'function') scanner.clear();
+                    setCameraControls(false);
+                }).catch(function () {
+                    stopVideoTracks();
+                    cameraRunning = false;
+                    setCameraControls(false);
+                    showMessage('The camera could not stop cleanly. Its video track was released; reload before scanning again.', 'error');
+                });
             }
 
-            startCameraButton.addEventListener('click', startCamera);
+            function stopCamera() {
+                cameraStopRequested = true;
+                if (cameraStartPromise) {
+                    return cameraStartPromise.catch(function () {}).then(stopCameraNow);
+                }
+                return stopCameraNow();
+            }
+
+            function scanImageFile(file) {
+                if (!file) return;
+                if (!cameraSupported) {
+                    showMessage('Image scanning is unavailable because the QR scanner library did not load. Enter the order number manually.', 'error');
+                    return;
+                }
+                if (typeof file.type === 'string' && !file.type.startsWith('image/')) {
+                    showMessage('Choose an image file containing the order QR code.', 'error');
+                    scanImageInput.value = '';
+                    return;
+                }
+                if (imageScanBusy || scanning) return;
+
+                try {
+                    createScanner();
+                } catch (error) {
+                    showMessage('The QR scanner could not initialize. Enter the order number manually.', 'error');
+                    return;
+                }
+
+                imageScanBusy = true;
+                setRequestBusy(true);
+                showMessage('Reading the QR code from the selected image...', 'success');
+                stopCamera().then(function () {
+                    if (typeof scanner.scanFile !== 'function') {
+                        throw new Error('Image scanning is not supported by this browser.');
+                    }
+                    return scanner.scanFile(file, true);
+                }).then(function (decodedText) {
+                    if (typeof scanner.clear === 'function') scanner.clear();
+                    imageScanBusy = false;
+                    setRequestBusy(false);
+                    onScanSuccess(decodedText);
+                }).catch(function () {
+                    let cleanupFailed = false;
+                    if (scanner && typeof scanner.clear === 'function') {
+                        try {
+                            scanner.clear();
+                        } catch (error) {
+                            cleanupFailed = true;
+                        }
+                    }
+                    imageScanBusy = false;
+                    setRequestBusy(false);
+                    showMessage(cleanupFailed
+                        ? 'The image scanner could not reset. Reload the page before scanning another image; manual order entry is still available.'
+                        : 'No readable QR code was found in that image. Try a clearer photo or enter the order number manually.', 'error');
+                }).finally(function () {
+                    scanImageInput.value = '';
+                });
+            }
+
+            function switchCamera() {
+                if (!cameraRunning || cameraDevices.length < 2 || scanning) return;
+                const currentId = getActiveCameraId() || activeCameraId;
+                const currentIndex = cameraDevices.findIndex(function (device) {
+                    return device.id === currentId;
+                });
+                const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % cameraDevices.length;
+                const nextCamera = cameraDevices[nextIndex];
+                showMessage('Switching camera...', 'success');
+                stopCamera().then(function () {
+                    return startCamera(nextCamera.id, true);
+                });
+            }
+
+            startCameraButton.addEventListener('click', function () {
+                startCamera('', false);
+            });
+            switchCameraButton.addEventListener('click', switchCamera);
+            scanImageButton.addEventListener('click', function () {
+                scanImageInput.click();
+            });
+            scanImageInput.addEventListener('change', function () {
+                scanImageFile(scanImageInput.files && scanImageInput.files[0]);
+            });
             stopCameraButton.addEventListener('click', function () {
                 stopCamera().then(function () {
                     showMessage('Camera stopped. You can still verify an order number manually.', 'success');
                 });
             });
-            window.addEventListener('beforeunload', function () {
+
+            function releaseCameraOnNavigation() {
+                cameraStopRequested = true;
+                stopVideoTracks();
                 if (cameraRunning && scanner && typeof scanner.stop === 'function') {
                     scanner.stop().catch(function () {});
                 }
+            }
+
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden && (cameraRunning || cameraStartPromise)) {
+                    stopCamera();
+                }
             });
+            window.addEventListener('pagehide', releaseCameraOnNavigation);
+            window.addEventListener('beforeunload', releaseCameraOnNavigation);
 
             setCameraControls(false);
             if (!cameraSupported) {

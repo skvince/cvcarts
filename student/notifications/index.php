@@ -82,6 +82,8 @@ $notificationsCssVersion = file_exists($notificationsCssPath) ? (string)filemtim
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <?= cvcarts_favicon_tags() ?>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>">

@@ -97,7 +97,7 @@ try {
             UNIQUE KEY orders_qr_token_hash_unique (qr_token_hash),
             KEY orders_ready_to_claim_idx (payment_status, order_status, verified_at),
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )",
+        ) ENGINE=InnoDB",
 
         "CREATE TABLE IF NOT EXISTS order_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -120,7 +120,7 @@ try {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (related_order_id) REFERENCES orders(id) ON DELETE SET NULL
-        )",
+        ) ENGINE=InnoDB",
 
         "CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -139,7 +139,7 @@ try {
             details TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
-        )"
+        ) ENGINE=InnoDB"
     ];
 
     foreach ($schema as $statement) {

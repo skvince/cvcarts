@@ -480,9 +480,11 @@ $statCards = [
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="admin-responsive">
 
 <head>
+    <?= cvcarts_favicon_tags() ?>
+
     <meta charset="UTF-8">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -510,7 +512,7 @@ $statCards = [
     >
 </head>
 
-<body>
+<body class="admin-dashboard-page">
 
 <?php cvcarts_admin_header($user, $alerts); ?>
 

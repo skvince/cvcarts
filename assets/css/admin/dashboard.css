@@ -22,6 +22,8 @@
     display: flex;
     align-items: flex-end;
     gap: 9px;
+    min-width: 0;
+    max-width: 100%;
     padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -31,6 +33,7 @@
 
 .dashboard-filter-field {
     min-width: 0;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -58,8 +61,16 @@
 }
 
 .dashboard-filter .filter-actions {
+    display: flex;
     grid-column: auto;
+    flex: 0 0 auto;
     flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.dashboard-filter .filter-actions .btn {
+    width: auto;
+    min-width: 0;
 }
 
 .dashboard-statistics {
@@ -200,11 +211,14 @@
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     align-items: start;
     gap: 17px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .dashboard-left-column,
 .dashboard-right-column {
     min-width: 0;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     gap: 17px;
@@ -212,6 +226,7 @@
 
 .dashboard-panel {
     min-width: 0;
+    max-width: 100%;
     padding: 22px;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -579,25 +594,41 @@
 
 @media (max-width: 768px) {
     .dashboard-filter {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         width: 100%;
-        flex-wrap: wrap;
+        gap: 10px;
     }
 
     .dashboard-filter-field {
-        flex: 1 1 100px;
+        width: 100%;
     }
 
     .dashboard-filter .select-control {
         width: 100%;
         min-width: 0;
+        min-height: 44px;
     }
 
     .dashboard-filter button {
-        flex: 0 0 auto;
+        flex: initial;
     }
 
     .dashboard-filter .filter-actions {
-        flex-direction: row;
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .dashboard-filter .filter-actions .btn {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 8px 10px;
+        white-space: normal;
     }
 
     .dashboard-panel {
@@ -654,5 +685,19 @@
 
     .ranking-total {
         font-size: 11px;
+    }
+}
+
+@media (max-width: 380px) {
+    .stats-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-filter .filter-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-panel {
+        padding: 14px;
     }
 }

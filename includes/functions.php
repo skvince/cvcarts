@@ -23,6 +23,13 @@ function cvcarts_url(string $path): string {
     return CVCARTS_BASE_PATH . '/' . ltrim($path, '/');
 }
 
+function cvcarts_favicon_tags(): string {
+    $iconUrl = cvcarts_h(cvcarts_url('/assets/images/logo.png'));
+    return '<link rel="icon" type="image/png" href="' . $iconUrl . '">' . PHP_EOL
+        . '<link rel="shortcut icon" type="image/png" href="' . $iconUrl . '">' . PHP_EOL
+        . '<link rel="apple-touch-icon" href="' . $iconUrl . '">';
+}
+
 function cvcarts_flash(string $type, string $message): void {
     $_SESSION['flash'][] = ['type' => $type, 'message' => $message];
 }

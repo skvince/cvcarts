@@ -36,7 +36,12 @@ function require_database_connection(): void {
     if ($pdo === null) {
         http_response_code(503);
         header('Content-Type: text/html; charset=utf-8');
-        echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Service unavailable</title></head><body><h1>Service temporarily unavailable</h1><p>Please try again later or contact the site administrator.</p></body></html>';
+        $iconUrl = htmlspecialchars(rtrim(CVCARTS_BASE_PATH, '/') . '/assets/images/logo.png', ENT_QUOTES, 'UTF-8');
+        echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            . '<link rel="icon" type="image/png" href="' . $iconUrl . '">'
+            . '<link rel="shortcut icon" type="image/png" href="' . $iconUrl . '">'
+            . '<link rel="apple-touch-icon" href="' . $iconUrl . '">'
+            . '<title>Service unavailable</title></head><body><h1>Service temporarily unavailable</h1><p>Please try again later or contact the site administrator.</p></body></html>';
         exit;
     }
 }
