@@ -15,9 +15,13 @@
     margin-bottom: 0;
 }
 
+.sales-print-period {
+    display: none;
+}
+
 .sales-toolbar {
     display: grid;
-    grid-template-columns: minmax(160px, .7fr) 1fr;
+    grid-template-columns: repeat(3, minmax(120px, .7fr)) minmax(max-content, 1.3fr);
     align-items: end;
     gap: 12px;
     padding: 14px;
@@ -43,6 +47,11 @@
     background: #f8fcf7;
     color: var(--text);
     font-size: var(--fs-body);
+}
+
+.sales-toolbar .form-select:disabled {
+    opacity: .58;
+    cursor: not-allowed;
 }
 
 .sales-toolbar .filter-actions {
@@ -295,7 +304,7 @@
 }
 
 /* Responsive */
-@media (max-width: 900px) {
+@media (max-width: 1050px) {
     .sales-page-heading {
         align-items: flex-start;
         flex-direction: column;
@@ -308,6 +317,14 @@
 }
 
 @media (max-width: 768px) {
+    .sales-toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sales-toolbar .filter-actions {
+        grid-column: 1 / -1;
+    }
+
     .sales-grid {
         grid-template-columns: 1fr;
     }
@@ -357,5 +374,90 @@
 
     .sales-toolbar .filter-actions .btn {
         width: 100%;
+    }
+}
+
+@media print {
+    @page {
+        margin: 14mm;
+    }
+
+    .top-strip,
+    .top-header,
+    .sidebar,
+    .sidebar-backdrop,
+    .sales-toolbar {
+        display: none !important;
+    }
+
+    body,
+    .app-layout {
+        min-height: 0 !important;
+        background: #fff !important;
+    }
+
+    .app-layout {
+        display: block !important;
+    }
+
+    .main-content {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .sales-page-heading {
+        display: block;
+        margin-bottom: 14px;
+    }
+
+    .sales-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .sales-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .sales-stats .stat-card,
+    .sales-breakdown-panel {
+        break-inside: avoid;
+    }
+
+    .sales-stats .stat-card,
+    .sales-breakdown-panel,
+    .sales-transactions {
+        border: 1px solid #bbb;
+        box-shadow: none !important;
+    }
+
+    .sales-print-period {
+        display: block;
+        margin: 4px 0 0;
+        color: #333;
+        font-size: 10pt;
+    }
+
+    .sales-stats .stat-card:hover {
+        transform: none;
+        box-shadow: none !important;
+    }
+
+    .sales-transactions .table-wrapper {
+        overflow: visible;
+    }
+
+    .sales-transactions .history-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: auto;
+    }
+
+    .sales-transactions .history-table tr {
+        break-inside: avoid;
     }
 }

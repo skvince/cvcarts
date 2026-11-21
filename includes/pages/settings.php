@@ -205,7 +205,7 @@ $flashes = cvcarts_get_flash();
     <title>CVCarts | Settings</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/shared/shared.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/shared/shared.css?v=' . filemtime(__DIR__ . '/../../assets/css/shared/shared.css'))); ?>">
     <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/' . $settingsCssDirectory . '/settings.css')); ?>">
 </head>
 <body class="<?php echo cvcarts_h($settingsPageClass); ?>">
@@ -217,25 +217,10 @@ $flashes = cvcarts_get_flash();
     <?php else: ?>
     <div class="top-strip">CVCarts - Your Essentials, Just a Cart Away.</div>
     <header class="top-header">
-        <a href="<?php echo cvcarts_h(cvcarts_url($dashboardRoute)); ?>"><img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="CVCarts Logo" class="header-logo"></a>
+        <a class="header-brand" href="<?php echo cvcarts_h(cvcarts_url($dashboardRoute)); ?>"><img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="CVCarts Logo" class="header-logo"></a>
         <div class="header-actions">
             <a class="header-icon" href="<?php echo cvcarts_h(cvcarts_url('/student/notifications/index.php')); ?>" aria-label="Notifications" title="Notifications"><i class="bi bi-bell" aria-hidden="true"></i></a>
-            <details class="header-menu profile-menu">
-                <summary class="admin-profile" aria-label="Open account menu">
-                    <img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="">
-                    <span><?php echo cvcarts_h($user['first_name']); ?></span>
-                </summary>
-                <div class="header-dropdown profile-dropdown">
-                    <div class="dropdown-title profile-title">
-                        <strong><?php echo cvcarts_h(trim((string)$user['first_name'] . ' ' . (string)$user['last_name'])); ?></strong>
-                        <span><?php echo cvcarts_h((string)$user['email']); ?></span>
-                    </div>
-                    <a class="dropdown-item" href="<?php echo cvcarts_h(cvcarts_url($settingsRoute)); ?>">
-                        <span class="dropdown-item-icon" aria-hidden="true"><i class="bi bi-gear"></i></span>
-                        <span><strong>Settings</strong><small>Profile, password, and recovery</small></span>
-                    </a>
-                </div>
-            </details>
+            <?php echo cvcarts_student_profile_menu($user); ?>
             <a class="header-logout" href="<?php echo cvcarts_h(cvcarts_url('/auth/logout.php')); ?>" title="Log out"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Log Out</span></a>
         </div>
     </header>

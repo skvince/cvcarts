@@ -30,6 +30,33 @@ function cvcarts_favicon_tags(): string {
         . '<link rel="apple-touch-icon" href="' . $iconUrl . '">';
 }
 
+function cvcarts_student_profile_menu(array $user): string {
+    $firstName = cvcarts_h((string)($user['first_name'] ?? ''));
+    $fullName = cvcarts_h(trim((string)($user['first_name'] ?? '') . ' ' . (string)($user['last_name'] ?? '')));
+    $email = cvcarts_h((string)($user['email'] ?? ''));
+    $profileImage = cvcarts_h(cvcarts_profile_image_url(
+        is_string($user['profile_image'] ?? null) ? $user['profile_image'] : null
+    ));
+    $settingsUrl = cvcarts_h(cvcarts_url('/student/settings/index.php'));
+
+    return '<details class="header-menu profile-menu">'
+        . '<summary class="admin-profile" aria-label="Open account menu">'
+        . '<img src="' . $profileImage . '" alt="">'
+        . '<span>' . $firstName . '</span>'
+        . '</summary>'
+        . '<div class="header-dropdown profile-dropdown">'
+        . '<div class="dropdown-title profile-title">'
+        . '<strong>' . $fullName . '</strong>'
+        . '<span>' . $email . '</span>'
+        . '</div>'
+        . '<a class="dropdown-item" href="' . $settingsUrl . '">'
+        . '<span class="dropdown-item-icon" aria-hidden="true"><i class="bi bi-gear"></i></span>'
+        . '<span><strong>Settings</strong><small>Profile, password, and recovery</small></span>'
+        . '</a>'
+        . '</div>'
+        . '</details>';
+}
+
 function cvcarts_flash(string $type, string $message): void {
     $_SESSION['flash'][] = ['type' => $type, 'message' => $message];
 }

@@ -124,41 +124,58 @@ label:has(> :is(input, select, textarea)[required]):not(:has(input[type="checkbo
 .top-header {
     position: relative;
     z-index: 5;
-    height: 70px;
+    height: 92px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 25px;
+    gap: 20px;
+    padding: 0 clamp(16px, 2.4vw, 36px);
     border-bottom: 1px solid var(--border);
-    background: rgba(255, 255, 255, .94);
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 6px 20px rgba(13, 66, 41, .07);
+    backdrop-filter: blur(14px);
+}
+
+.header-brand {
+    min-width: 0;
+    height: 100%;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
 }
 
 .header-logo {
-    width: 125px;
-    height: 54px;
+    display: block;
+    width: 210px;
+    height: 88px;
     object-fit: contain;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: #f5faf6;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    image-rendering: auto;
 }
 
 .header-actions {
+    min-width: 0;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
 }
 
 .header-icon {
-    min-width: 40px;
-    min-height: 40px;
-    border: 0;
-    border-radius: 9px;
-    background: transparent;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: #f7faf7;
     color: var(--deep-green);
     font-size: 21px;
     cursor: pointer;
     text-decoration: none;
-    transition: color .16s ease, background-color .16s ease, transform .16s ease;
+    transition: color .16s ease, background-color .16s ease, border-color .16s ease, transform .16s ease;
 }
 
 .header-icon i {
@@ -168,27 +185,28 @@ label:has(> :is(input, select, textarea)[required]):not(:has(input[type="checkbo
 
 .header-icon:hover,
 .header-icon:focus-visible {
+    border-color: #b8d9c1;
     color: var(--emerald);
-    background: var(--surface-soft);
+    background: #eff8f1;
     transform: translateY(-2px);
 }
 
 .header-logout {
-    min-height: 40px;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
-    padding: 0 12px;
-    border: 1px solid #e6caca;
-    border-radius: 9px;
+    padding: 0 15px;
+    border: 1px solid #cfe4d4;
+    border-radius: 12px;
     background: #fff;
-    color: #963f36;
+    color: var(--deep-green);
     font-size: var(--fs-small);
     font-weight: var(--fw-semibold);
     text-decoration: none;
     white-space: nowrap;
-    transition: color .16s ease, background-color .16s ease, border-color .16s ease, transform .16s ease;
+    transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
 .header-logout i {
@@ -198,9 +216,10 @@ label:has(> :is(input, select, textarea)[required]):not(:has(input[type="checkbo
 
 .header-logout:hover,
 .header-logout:focus-visible {
-    border-color: #c97e73;
-    background: #fff4f2;
-    color: #7d2923;
+    border-color: #9dcfae;
+    background: #eff8f1;
+    color: #0c5b35;
+    box-shadow: 0 4px 12px rgba(13, 66, 41, .1);
     transform: translateY(-1px);
 }
 
@@ -211,20 +230,44 @@ label:has(> :is(input, select, textarea)[required]):not(:has(input[type="checkbo
 .admin-profile {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
+    min-height: 48px;
+    max-width: 240px;
+    padding: 4px 12px 4px 5px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
     list-style: none;
     color: var(--text);
     font-size: var(--fs-body);
-    font-weight: var(--fw-bold);
-    cursor: pointer;
+    font-weight: var(--fw-semibold);
+    cursor: default;
+    transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+
+.header-menu > .admin-profile:hover,
+.header-menu[open] > .admin-profile {
+    border-color: #c5dfcc;
+    background: #fbfefb;
+    box-shadow: 0 3px 10px rgba(13, 66, 41, .07);
+}
+
+.admin-profile > span {
+    min-width: 0;
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .admin-profile img {
-    width: 35px;
-    height: 35px;
-    border: 2px solid #c6edbd;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border: 2px solid #d2ebd8;
     border-radius: 50%;
     object-fit: cover;
+    background: #f5faf6;
 }
 
 .app-layout {
@@ -1193,19 +1236,21 @@ dialog.app-modal.is-closing::backdrop {
 
 .notification-badge {
     position: absolute;
-    top: -7px;
-    right: -9px;
-    min-width: 17px;
-    height: 17px;
-    padding: 0 4px;
+    top: 0;
+    right: 0;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
     display: grid;
     place-items: center;
-    border-radius: 9px;
+    border: 2px solid #fff;
+    border-radius: 10px;
     background: #c0392b;
     color: #fff;
     font-size: 10px;
     font-weight: var(--fw-bold);
     line-height: 1;
+    box-shadow: 0 1px 3px rgba(80, 20, 16, .2);
 }
 
 .header-dropdown {
@@ -1314,11 +1359,6 @@ dialog.app-modal.is-closing::backdrop {
     word-break: break-all;
 }
 
-.profile-chevron {
-    margin-left: 6px;
-    font-size: 11px;
-}
-
 @media (max-width: 560px) {
     .header-dropdown {
         width: min(320px, calc(100vw - 24px));
@@ -1341,6 +1381,50 @@ dialog.app-modal.is-closing::backdrop {
 }
 
 @media (max-width: 768px) {
+    .top-header {
+        gap: 10px;
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+    .header-logo {
+        width: 166px;
+        height: 70px;
+    }
+
+    .header-actions {
+        gap: 6px;
+    }
+
+    .header-actions .admin-profile {
+        min-width: 0;
+        max-width: 142px;
+        min-height: 44px;
+        flex: 0 1 142px;
+        padding: 3px 8px 3px 4px;
+    }
+
+    .header-actions .admin-profile img {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+    }
+
+    .header-actions .admin-profile > span {
+        max-width: 82px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .sync-connection {
+        width: 32px;
+        height: 32px;
+        justify-content: center;
+        padding: 0;
+        overflow: hidden;
+        font-size: 0;
+    }
+
     .app-layout {
         display: block;
     }
@@ -1409,18 +1493,94 @@ dialog.app-modal.is-closing::backdrop {
 
     .top-header {
         padding: 0 14px;
+        gap: 8px;
+        height: 72px;
     }
 
     .header-logo {
-        width: 100px;
+        width: 126px;
+        height: 54px;
     }
 
     .header-actions {
-        gap: 12px;
+        gap: 5px;
     }
 
     .admin-profile {
         font-size: var(--fs-caption);
+    }
+
+    .header-icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    .header-actions > .admin-profile {
+        width: 40px;
+        height: 40px;
+        min-height: 40px;
+        flex: 0 0 40px;
+        justify-content: center;
+        padding: 3px;
+        border-radius: 12px;
+    }
+
+    .header-actions > .admin-profile > span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    .header-actions > .admin-profile img {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+    }
+
+    .header-menu.profile-menu > .admin-profile {
+        width: 40px;
+        height: 40px;
+        min-height: 40px;
+        justify-content: center;
+        padding: 3px;
+        border-radius: 13px;
+    }
+
+    .header-menu.profile-menu > .admin-profile img {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+    }
+
+    .header-logout {
+        width: 40px;
+        min-width: 40px;
+        min-height: 40px;
+        flex: 0 0 40px;
+        gap: 0;
+        padding: 0;
+    }
+
+    .header-logout i {
+        font-size: 17px;
+    }
+
+    .header-logout span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    .app-layout {
+        min-height: calc(100vh - 99px);
     }
 
     .form-grid,
@@ -1494,7 +1654,7 @@ dialog.app-modal.is-closing::backdrop {
 
 .sidebar {
     position: fixed;
-    top: 97px;
+    top: 119px;
     bottom: 0;
     left: 0;
     z-index: 55;
@@ -1503,7 +1663,7 @@ dialog.app-modal.is-closing::backdrop {
 }
 
 .app-layout {
-    min-height: calc(100vh - 97px);
+    min-height: calc(100vh - 119px);
 }
 
 .main-content {
@@ -1518,30 +1678,40 @@ dialog.app-modal.is-closing::backdrop {
 .sync-connection {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    color: var(--muted);
+    gap: 8px;
+    padding: 7px 11px;
+    border: 1px solid #d5ead9;
+    border-radius: 999px;
+    background: #f1f9f3;
+    color: #4c6b58;
     font-size: var(--fs-caption);
     font-weight: var(--fw-semibold);
     white-space: nowrap;
 }
 
 .sync-connection::before {
-    width: 8px;
-    height: 8px;
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
     border-radius: 50%;
     background: #d29a28;
     content: "";
 }
 
 .sync-connection-connected {
-    color: #167340;
+    border-color: #c8e6d0;
+    background: #edf8f0;
+    color: #12663a;
 }
 
 .sync-connection-connected::before {
-    background: var(--emerald);
+    background: #168653;
+    box-shadow: 0 0 0 3px rgba(22, 134, 83, .12);
 }
 
 .sync-connection-offline {
+    border-color: #efd1d1;
+    background: #fff5f5;
     color: #a52e2e;
 }
 
@@ -1568,7 +1738,7 @@ dialog.app-modal.is-closing::backdrop {
     }
 
     .sidebar {
-        top: 97px;
+        top: 119px;
         bottom: 0;
         width: min(300px, 85vw);
         min-height: 0;
@@ -1655,7 +1825,7 @@ dialog.app-modal.is-closing::backdrop {
 
     .sidebar-backdrop {
         position: fixed;
-        inset: 97px 0 0;
+        inset: 119px 0 0;
         z-index: 50;
         display: block;
         border: 0;
@@ -1681,22 +1851,26 @@ dialog.app-modal.is-closing::backdrop {
 
 @media (max-width: 560px) {
     .top-header {
-        height: 64px;
+        height: 72px;
         gap: 8px;
         padding: 0 10px;
     }
 
     .sidebar {
-        top: 91px;
+        top: 99px;
     }
 
     .sidebar-backdrop {
-        inset: 91px 0 0;
+        inset: 99px 0 0;
+    }
+
+    .app-layout {
+        min-height: calc(100vh - 99px);
     }
 
     .header-logo {
-        width: 76px;
-        height: 48px;
+        width: 126px;
+        height: 54px;
     }
 
     .header-actions {
@@ -1705,7 +1879,11 @@ dialog.app-modal.is-closing::backdrop {
     }
 
     .sync-connection {
-        width: 9px;
+        width: 32px;
+        height: 32px;
+        flex: 0 0 32px;
+        justify-content: center;
+        padding: 0;
         overflow: hidden;
         font-size: 0;
     }
@@ -1717,12 +1895,21 @@ dialog.app-modal.is-closing::backdrop {
     .header-actions .header-menu.profile-menu > .admin-profile {
         width: 40px;
         height: 40px;
+        min-height: 40px;
+        flex: 0 0 40px;
         display: flex;
         justify-content: center;
         gap: 0;
+        padding: 3px;
         border: 1px solid var(--border);
-        border-radius: 9px;
+        border-radius: 13px;
         background: #fff;
+    }
+
+    .header-actions .header-menu.profile-menu > .admin-profile img {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
     }
 
     .header-actions .header-menu.profile-menu > .admin-profile > span {
@@ -1735,10 +1922,12 @@ dialog.app-modal.is-closing::backdrop {
     }
 
     .header-logout {
+        width: 40px;
+        min-width: 40px;
         min-height: 40px;
-        gap: 5px;
-        padding: 0 8px;
-        font-size: 11px;
+        flex: 0 0 40px;
+        gap: 0;
+        padding: 0;
     }
 
     .header-logout i {
@@ -1757,34 +1946,79 @@ dialog.app-modal.is-closing::backdrop {
     }
 
     .top-header {
-        gap: 4px;
-        padding-right: 8px;
-        padding-left: 8px;
+        gap: 8px;
+        padding-right: 6px;
+        padding-left: 6px;
+    }
+
+    .mobile-menu-toggle {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px;
     }
 
     .header-logo {
-        width: 68px;
+        width: 116px;
+        height: 50px;
     }
 
     .header-actions {
-        gap: 4px;
+        gap: 2px;
+    }
+
+    .sync-connection {
+        width: 28px;
+        height: 28px;
+        flex-basis: 28px;
     }
 
     .header-icon {
-        width: 40px;
-        min-width: 40px;
-        flex: 0 0 40px;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        flex: 0 0 36px;
     }
 
     .header-logout {
-        width: 40px;
-        min-width: 40px;
-        flex: 0 0 40px;
+        width: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        flex: 0 0 36px;
         gap: 0;
         padding: 0;
     }
 
+    .header-logout i {
+        font-size: 16px;
+    }
+
     .header-logout span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    .header-actions > .admin-profile {
+        width: 36px;
+        height: 36px;
+        min-height: 36px;
+        flex: 0 0 36px;
+        justify-content: center;
+        padding: 3px;
+        border-radius: 11px;
+    }
+
+    .header-actions > .admin-profile img {
+        width: 30px;
+        height: 30px;
+        flex-basis: 30px;
+    }
+
+    .header-actions > .admin-profile > span {
         position: absolute;
         width: 1px;
         height: 1px;

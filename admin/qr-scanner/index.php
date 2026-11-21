@@ -16,7 +16,7 @@ $csrfToken = cvcarts_csrf_token();
     <title>CVCarts | Order Claim Scanner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= cvcarts_h(cvcarts_url('/assets/css/shared/shared.css')) ?>">
+    <link rel="stylesheet" href="<?= cvcarts_h(cvcarts_url('/assets/css/shared/shared.css?v=' . filemtime(__DIR__ . '/../../assets/css/shared/shared.css'))) ?>">
     <link rel="stylesheet" href="<?= cvcarts_h(cvcarts_url('/assets/css/admin/qr-scanner.css')) ?>">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>

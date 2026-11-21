@@ -7,32 +7,70 @@ $db = cvcarts_db();
 $user = cvcarts_user();
 $alerts = cvcarts_admin_alerts($db);
 
-$period = is_string($_GET['period'] ?? null) ? $_GET['period'] : 'month';
+$currentYear = (int)date('Y');
+$currentMonth = (int)date('n');
+$period = is_string($_GET['period'] ?? null) ? $_GET['period'] : 'specific';
 $dateRange = [
     'week' => "o.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)",
     'month' => "o.created_at >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)",
     'year' => "o.created_at >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)",
 ];
 
-if (!isset($dateRange[$period])) {
-    $period = 'month';
+if ($period !== 'specific' && !isset($dateRange[$period])) {
+    $period = 'specific';
 }
 
-$where = 'o.payment_status = "Paid" AND o.order_status <> "Cancelled" AND ' . $dateRange[$period];
+$monthInput = $_GET['month'] ?? null;
+$month = is_string($monthInput) || is_int($monthInput)
+    ? filter_var($monthInput, FILTER_VALIDATE_INT)
+    : false;
+if ($month === false || $month < 1 || $month > 12) {
+    $month = $currentMonth;
+}
 
-$statsStmt = $db->query(
+$yearQuery = $db->query('SELECT DISTINCT YEAR(created_at) FROM orders WHERE created_at IS NOT NULL ORDER BY YEAR(created_at) DESC');
+$reportYears = array_map('intval', $yearQuery->fetchAll(PDO::FETCH_COLUMN));
+if (!in_array($currentYear, $reportYears, true)) {
+    array_unshift($reportYears, $currentYear);
+}
+$reportYears = array_values(array_unique($reportYears));
+$yearInput = $_GET['year'] ?? null;
+$year = is_string($yearInput) || is_int($yearInput)
+    ? filter_var($yearInput, FILTER_VALIDATE_INT)
+    : false;
+if ($year === false || !in_array($year, $reportYears, true)) {
+    $year = $currentYear;
+}
+
+$queryParams = [];
+$whereParts = ['o.payment_status = "Paid"', 'o.order_status <> "Cancelled"'];
+if ($period === 'specific') {
+    $rangeStart = sprintf('%04d-%02d-01 00:00:00', $year, $month);
+    $rangeEnd = (new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month)))
+        ->modify('first day of next month')
+        ->format('Y-m-d 00:00:00');
+    $whereParts[] = 'o.created_at >= :range_start AND o.created_at < :range_end';
+    $queryParams = ['range_start' => $rangeStart, 'range_end' => $rangeEnd];
+} else {
+    $whereParts[] = $dateRange[$period];
+}
+$where = implode(' AND ', $whereParts);
+
+$statsStmt = $db->prepare(
     'SELECT COUNT(*) AS order_count, COALESCE(SUM(o.total_amount), 0) AS revenue
      FROM orders o WHERE ' . $where
 );
+$statsStmt->execute($queryParams);
 $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 
-$paymentStmt = $db->query(
+$paymentStmt = $db->prepare(
     'SELECT o.payment_method, COUNT(*) AS count, COALESCE(SUM(o.total_amount), 0) AS revenue
      FROM orders o
      WHERE ' . $where . '
      GROUP BY o.payment_method
      ORDER BY revenue DESC'
 );
+$paymentStmt->execute($queryParams);
 $paymentMethods = $paymentStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $transactionSql = '
@@ -44,36 +82,15 @@ $transactionSql = '
     ORDER BY o.created_at DESC';
 
 $stmt = $db->prepare($transactionSql . ' LIMIT 50');
-$stmt->execute();
+$stmt->execute($queryParams);
 $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-if (isset($_GET['export']) && $_GET['export'] === 'csv') {
-    $exportStmt = $db->prepare($transactionSql);
-    $exportStmt->execute();
-    $exportTransactions = $exportStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="cvcarts-sales-' . $period . '-' . date('Ymd-His') . '.csv"');
-    header('Cache-Control: no-store');
-
-    $output = fopen('php://output', 'w');
-    fwrite($output, "\xEF\xBB\xBF");
-    fputcsv($output, ['Order Reference', 'Student', 'Payment Method', 'Amount', 'Transaction Date']);
-
-    foreach ($exportTransactions as $transaction) {
-        fputcsv($output, [
-            $transaction['reference_number'],
-            $transaction['first_name'] . ' ' . $transaction['last_name'],
-            $transaction['payment_method'],
-            number_format((float)$transaction['total_amount'], 2, '.', ''),
-            $transaction['created_at'],
-        ]);
-    }
-
-    fclose($output);
-    exit;
-}
-
+$periodLabel = $period === 'specific'
+    ? date('F', mktime(0, 0, 0, (int)$month, 1)) . ' ' . $year
+    : [
+        'week' => 'Last 7 days',
+        'month' => 'Last month',
+        'year' => 'Last year',
+    ][$period];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -85,7 +102,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     <title>CVCarts | Sales</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/shared/shared.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/shared/shared.css?v=' . filemtime(__DIR__ . '/../../assets/css/shared/shared.css'))); ?>">
     <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/admin/sales.css')); ?>">
 </head>
 <body>
@@ -102,18 +119,40 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                         <p>Recognized revenue from paid, non-cancelled orders.</p>
                     </div>
                 </div>
+                <p class="sales-print-period">Report period: <?php echo cvcarts_h($periodLabel); ?></p>
                 <form method="get" class="sales-toolbar" data-filter-form>
                     <label class="sales-period-field" for="sales-period">Reporting period
                         <select class="form-select" id="sales-period" name="period">
+                            <option value="specific" <?php echo $period === 'specific' ? 'selected' : ''; ?>>Specific month and year</option>
                             <option value="week" <?php echo $period === 'week' ? 'selected' : ''; ?>>Last 7 days</option>
                             <option value="month" <?php echo $period === 'month' ? 'selected' : ''; ?>>Last month</option>
                             <option value="year" <?php echo $period === 'year' ? 'selected' : ''; ?>>Last year</option>
                         </select>
                     </label>
+                    <label class="sales-period-field" for="sales-month">Month
+                        <select class="form-select" id="sales-month" name="month" <?php echo $period !== 'specific' ? 'disabled' : ''; ?>>
+                            <?php foreach ([
+                                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
+                            ] as $monthNumber => $monthName): ?>
+                                <option value="<?php echo $monthNumber; ?>" <?php echo (int)$month === $monthNumber ? 'selected' : ''; ?>><?php echo $monthName; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label class="sales-period-field" for="sales-year">Year
+                        <select class="form-select" id="sales-year" name="year" <?php echo $period !== 'specific' ? 'disabled' : ''; ?>>
+                            <?php foreach ($reportYears as $reportYear): ?>
+                                <option value="<?php echo (int)$reportYear; ?>" <?php echo (int)$year === (int)$reportYear ? 'selected' : ''; ?>><?php echo (int)$reportYear; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
                     <div class="filter-actions">
                         <button class="btn" type="submit" data-loading-label="Applying…">Apply Filters</button>
                         <a href="<?php echo cvcarts_h(cvcarts_url('/admin/sales/index.php')); ?>" class="btn btn-secondary" data-filter-reset>Reset Filters</a>
-                        <a href="<?php echo cvcarts_h(cvcarts_url('/admin/sales/index.php?period=' . rawurlencode($period) . '&export=csv')); ?>" class="btn btn-secondary">Export CSV</a>
+                        <button class="btn btn-secondary" type="button" onclick="window.print()">
+                            <i class="bi bi-printer" aria-hidden="true"></i> Print Report
+                        </button>
                     </div>
                 </form>
             </div>
@@ -214,5 +253,23 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             </section>
         </main>
     </div>
+    <script>
+        (function () {
+            const period = document.getElementById('sales-period');
+            const month = document.getElementById('sales-month');
+            const year = document.getElementById('sales-year');
+
+            if (period && month && year) {
+                function updateDateFields() {
+                    const disabled = period.value !== 'specific';
+                    month.disabled = disabled;
+                    year.disabled = disabled;
+                }
+
+                period.addEventListener('change', updateDateFields);
+                updateDateFields();
+            }
+        }());
+    </script>
 </body>
 </html>

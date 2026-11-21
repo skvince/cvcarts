@@ -27,7 +27,7 @@ function cvcarts_admin_header(array $user, array $alerts = []): void {
     ?>
     <div class="top-strip">CVCarts - Your Essentials, Just a Cart Away.</div>
     <header class="top-header">
-        <a href="<?= cvcarts_h($dashboardUrl) ?>"><img src="<?= cvcarts_h(cvcarts_url('/assets/images/logo.png')) ?>" alt="CVCarts Logo" class="header-logo"></a>
+        <a class="header-brand" href="<?= cvcarts_h($dashboardUrl) ?>"><img src="<?= cvcarts_h(cvcarts_url('/assets/images/logo.png')) ?>" alt="CVCarts Logo" class="header-logo"></a>
         <div class="header-actions">
             <details class="header-menu notification-menu">
                 <summary class="header-icon" aria-label="Notifications" title="Notifications">
@@ -73,9 +73,9 @@ function cvcarts_admin_header(array $user, array $alerts = []): void {
                 </div>
             </details>
             <details class="header-menu profile-menu">
-                <summary class="admin-profile">
-                    <img src="<?= cvcarts_h(cvcarts_url('/assets/images/logo.png')) ?>" alt="">
-                    <span><?= cvcarts_h((string)$user['first_name']) ?><i class="profile-chevron bi bi-chevron-down" aria-hidden="true"></i></span>
+                <summary class="admin-profile" aria-label="Open account menu">
+                    <img src="<?= cvcarts_h(cvcarts_profile_image_url(is_string($user['profile_image'] ?? null) ? $user['profile_image'] : null)) ?>" alt="">
+                    <span><?= cvcarts_h((string)$user['first_name']) ?></span>
                 </summary>
                 <div class="header-dropdown profile-dropdown">
                     <div class="dropdown-title profile-title">

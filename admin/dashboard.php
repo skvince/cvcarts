@@ -503,12 +503,12 @@ $statCards = [
 
     <link
         rel="stylesheet"
-        href="<?php echo cvcarts_h(cvcarts_url('/assets/css/shared/shared.css')); ?>"
+        href="<?php echo cvcarts_h(cvcarts_url('/assets/css/shared/shared.css?v=' . filemtime(__DIR__ . '/../assets/css/shared/shared.css'))); ?>"
     >
 
     <link
         rel="stylesheet"
-        href="<?php echo cvcarts_h(cvcarts_url('/assets/css/admin/dashboard.css')); ?>"
+        href="<?php echo cvcarts_h(cvcarts_url('/assets/css/admin/dashboard.css?v=' . filemtime(__DIR__ . '/../assets/css/admin/dashboard.css'))); ?>"
     >
 </head>
 
@@ -646,17 +646,7 @@ $statCards = [
 
         <?php endforeach; ?>
 
-        <section class="dashboard-statistics" aria-labelledby="statistics-title">
-            <div class="section-heading">
-                <div>
-                    <h2 id="statistics-title">Performance Overview</h2>
-                    <p>
-                        Students and products are all-time/current totals.
-                        All other metrics show <?php echo cvcarts_h($selectedMonthName . ' ' . $selectedYear); ?>.
-                    </p>
-                </div>
-            </div>
-
+        <section class="dashboard-statistics" aria-label="Performance metrics">
             <div class="stats-grid">
                 <?php foreach ($statCards as $card): ?>
                     <article class="stat-card stat-card-<?php echo cvcarts_h($card['tone']); ?>">

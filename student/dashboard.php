@@ -40,18 +40,18 @@ $statCards = [
     <title>CVCarts | Student Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/shared/shared.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/shared/shared.css?v=' . filemtime(__DIR__ . '/../assets/css/shared/shared.css'))); ?>">
     <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/student/dashboard.css')); ?>">
 </head>
 <body>
     <div class="top-strip">CVCarts - Your Essentials, Just a Cart Away.</div>
     <header class="top-header">
-        <a href="<?php echo cvcarts_h(cvcarts_url('/student/dashboard.php')); ?>"><img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="CVCarts Logo" class="header-logo"></a>
+        <a class="header-brand" href="<?php echo cvcarts_h(cvcarts_url('/student/dashboard.php')); ?>"><img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="CVCarts Logo" class="header-logo"></a>
         <div class="header-actions">
         <a class="header-icon" href="<?php echo cvcarts_h(cvcarts_url('/student/notifications/index.php')); ?>" aria-label="Notifications" title="Notifications">
             <i class="bi bi-bell" aria-hidden="true"></i>
         </a>
-            <div class="admin-profile"><img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt=""><span><?php echo cvcarts_h($user['first_name']); ?></span></div>
+            <?php echo cvcarts_student_profile_menu($user); ?>
             <a class="header-logout" href="<?php echo cvcarts_h(cvcarts_url('/auth/logout.php')); ?>" title="Log out"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Log Out</span></a>
         </div>
     </header>
@@ -85,13 +85,7 @@ $statCards = [
                 <div class="flash-message <?php echo $flash['type'] === 'error' ? 'error' : ($flash['type'] === 'warning' ? 'warning' : ''); ?>" data-app-alert="true" data-alert-type="<?php echo cvcarts_h($flash['type']); ?>" data-alert-title="<?php echo $flash['type'] === 'error' ? 'Something Went Wrong' : ($flash['type'] === 'warning' ? 'Please Note' : 'Success'); ?>" role="status"><?php echo cvcarts_h($flash['message']); ?></div>
             <?php endforeach; ?>
 
-            <section class="dashboard-statistics" aria-labelledby="student-statistics-title">
-                <div class="section-heading">
-                    <div>
-                        <h2 id="student-statistics-title">Your Activity</h2>
-                        <p>A quick overview of your shopping, payments, and orders.</p>
-                    </div>
-                </div>
+            <section class="dashboard-statistics" aria-label="Account activity summary">
                 <div class="stats-grid student-stats">
                     <?php foreach ($statCards as $card): ?>
                         <article class="stat-card stat-card-<?php echo cvcarts_h($card['tone']); ?>">

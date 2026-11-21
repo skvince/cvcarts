@@ -1,9 +1,5 @@
 /* CVCarts admin dashboard */
 
-.header-logo {
-    filter: drop-shadow(0 1px 1px rgba(13, 66, 41, .18));
-}
-
 .page-heading {
     align-items: flex-start;
     flex-wrap: wrap;
