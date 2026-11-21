@@ -335,9 +335,25 @@
                 const nextMain = nextDocument.querySelector('.main-content');
                 const currentMain = document.querySelector('.main-content');
                 if (!nextMain || !currentMain || hasUnsubmittedChanges || document.querySelector('dialog[open], .modal.show')) return;
+                const tableScrollPositions = Array.from(currentMain.querySelectorAll('.table-wrapper, .recent-orders-scroll'))
+                    .map(function (container) {
+                        return { left: container.scrollLeft, top: container.scrollTop };
+                    });
+                const pageScrollX = window.scrollX;
+                const pageScrollY = window.scrollY;
                 currentMain.replaceChildren.apply(currentMain, Array.from(nextMain.childNodes).map(function (node) {
                     return document.importNode(node, true);
                 }));
+                window.requestAnimationFrame(function () {
+                    window.scrollTo(pageScrollX, pageScrollY);
+                    Array.from(currentMain.querySelectorAll('.table-wrapper, .recent-orders-scroll'))
+                        .forEach(function (container, index) {
+                            const position = tableScrollPositions[index];
+                            if (!position) return;
+                            container.scrollLeft = position.left;
+                            container.scrollTop = position.top;
+                        });
+                });
                 document.dispatchEvent(new CustomEvent('cvcarts:content-updated'));
             }).catch(function () {
                 if (!navigator.onLine) {

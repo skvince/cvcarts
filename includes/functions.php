@@ -19,6 +19,68 @@ function cvcarts_redirect(string $path): void {
     exit;
 }
 
+const CVCARTS_INACTIVITY_SECONDS = 180;
+const CVCARTS_INACTIVITY_WARNING_SECONDS = 150;
+
+function cvcarts_destroy_authenticated_session(): void {
+    $cookie = session_get_cookie_params();
+    $_SESSION = [];
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
+    if (ini_get('session.use_cookies')) {
+        setcookie(session_name(), '', [
+            'expires' => time() - 42000,
+            'path' => $cookie['path'],
+            'domain' => $cookie['domain'],
+            'secure' => $cookie['secure'],
+            'httponly' => $cookie['httponly'],
+            'samesite' => $cookie['samesite'] ?? 'Lax',
+        ]);
+    }
+}
+
+function cvcarts_enforce_session_timeout(): bool {
+    if (!isset($_SESSION['user_id'])) {
+        return true;
+    }
+
+    $now = time();
+    $lastActivity = (int)($_SESSION['last_activity'] ?? 0);
+    if ($lastActivity === 0) {
+        $_SESSION['last_activity'] = $now;
+        return true;
+    }
+
+    if ($now - $lastActivity >= CVCARTS_INACTIVITY_SECONDS) {
+        return false;
+    }
+    return true;
+}
+
+function cvcarts_session_expired_response(): void {
+    $role = $_SESSION['user_role'] ?? '';
+    cvcarts_destroy_authenticated_session();
+
+    $accept = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+    $requestedWith = strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    $isApi = str_starts_with((string)($_SERVER['REQUEST_URI'] ?? ''), CVCARTS_BASE_PATH . '/api/')
+        || str_contains($accept, 'application/json')
+        || $requestedWith === 'xmlhttprequest';
+
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    if ($isApi) {
+        http_response_code(401);
+        header('Content-Type: application/json');
+        echo json_encode(['expired' => true, 'login_url' => cvcarts_url('/auth/login.php')]);
+        exit;
+    }
+
+    cvcarts_redirect(cvcarts_url('/auth/login.php?expired=1&role=' . urlencode((string)$role)));
+}
+
 function cvcarts_url(string $path): string {
     return CVCARTS_BASE_PATH . '/' . ltrim($path, '/');
 }
@@ -445,6 +507,30 @@ function cvcarts_require_login(?string $role = null): void {
         cvcarts_flash('warning', 'Change the temporary admin password to continue.');
         cvcarts_redirect(cvcarts_url('/admin/settings/index.php?force=1'));
     }
+
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    if (strpos($scriptName, '/api/') === false) {
+        cvcarts_inactivity_bootstrap();
+    }
+}
+
+function cvcarts_inactivity_bootstrap(): void {
+    $csrf = cvcarts_csrf_token();
+    $keepAliveUrl = cvcarts_h(cvcarts_url('/api/session/keepalive.php'));
+    ?>
+    <script>
+        window.CVCARTS_SESSION_CONFIG = {
+            keepAliveUrl: <?= json_encode($keepAliveUrl) ?>,
+            csrfToken: <?= json_encode($csrf) ?>,
+            warningSeconds: <?= CVCARTS_INACTIVITY_WARNING_SECONDS ?>,
+            timeoutSeconds: <?= CVCARTS_INACTIVITY_SECONDS ?>
+        };
+    </script>
+    <script src="<?= cvcarts_h(cvcarts_url('/assets/js/inactivity.js?v=' . filemtime(__DIR__ . '/../assets/js/inactivity.js'))) ?>" defer></script>
+    <?php
 }
 
 function cvcarts_cart_count(): int {

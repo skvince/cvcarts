@@ -8,9 +8,28 @@
     vertical-align: middle;
 }
 
+.users-table .user-identity {
+    display: flex;
+    min-width: 190px;
+    align-items: center;
+    gap: 10px;
+}
+
+.users-table .user-avatar {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border: 2px solid #dcebe0;
+    border-radius: 50%;
+    background: #f2f7f3;
+    object-fit: cover;
+}
+
 .users-table .user-name {
+    min-width: 0;
     color: var(--deep-green);
     font-weight: var(--fw-semibold);
+    overflow-wrap: anywhere;
 }
 
 .users-toolbar {

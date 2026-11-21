@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['user_id'] = (int)$user['id'];
     $_SESSION['user_role'] = $user['role'];
     $_SESSION['auth_version'] = (int)$user['auth_version'];
+    $_SESSION['last_activity'] = time();
     $db->prepare('UPDATE users SET last_login = NOW(), last_login_at = NOW() WHERE id = :id')->execute(['id' => $user['id']]);
 
     if ((int)$user['must_change_password'] === 1) {

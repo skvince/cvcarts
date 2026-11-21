@@ -100,7 +100,7 @@ $total = (int)$countQuery->fetchColumn();
 $totalPages = max(1, (int)ceil($total / $pageSize));
 $page = min($page, $totalPages);
 $studentQuery = $db->prepare(
-    'SELECT u.id, u.first_name, u.middle_name, u.last_name, u.email, u.is_active, u.is_verified, u.account_status,
+    'SELECT u.id, u.first_name, u.middle_name, u.last_name, u.email, u.profile_image, u.is_active, u.is_verified, u.account_status,
         u.email_verified_at, u.created_at, u.last_login_at, COUNT(o.id) AS order_count
      FROM users u LEFT JOIN orders o ON o.user_id = u.id' . $whereSql . '
      GROUP BY u.id ORDER BY ' . $sortOptions[$sort] . ' LIMIT :limit OFFSET :offset'
@@ -125,7 +125,7 @@ $flashes = cvcarts_get_flash();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= cvcarts_h(cvcarts_url('/assets/css/shared/shared.css?v=' . filemtime(__DIR__ . '/../../assets/css/shared/shared.css'))) ?>">
-    <link rel="stylesheet" href="<?= cvcarts_h(cvcarts_url('/assets/css/admin/users.css')) ?>">
+    <link rel="stylesheet" href="<?= cvcarts_h(cvcarts_url('/assets/css/admin/users.css?v=' . filemtime(__DIR__ . '/../../assets/css/admin/users.css'))) ?>">
 </head>
 <body>
     <?php cvcarts_admin_header($admin, $alerts); ?>
@@ -154,8 +154,12 @@ $flashes = cvcarts_get_flash();
                     <?php if (!$students): ?><tr><td colspan="7">No student accounts found.</td></tr><?php endif; ?>
                     <?php foreach ($students as $student): ?>
                         <?php $verified = (int)$student['is_verified'] === 1 && $student['email_verified_at'] !== null; ?>
+                        <?php $studentName = trim($student['first_name'] . ' ' . ($student['middle_name'] ?? '') . ' ' . $student['last_name']); ?>
                         <tr>
-                            <td><?= cvcarts_h(trim($student['first_name'] . ' ' . ($student['middle_name'] ?? '') . ' ' . $student['last_name'])) ?></td>
+                            <td><div class="user-identity">
+                                <img class="user-avatar" src="<?= cvcarts_h(cvcarts_profile_image_url(is_string($student['profile_image'] ?? null) ? $student['profile_image'] : null)) ?>" alt="<?= cvcarts_h($studentName . ' profile picture') ?>" loading="lazy" onerror="this.onerror=null;this.src='<?= cvcarts_h(cvcarts_url('/assets/images/default-student-avatar.svg')) ?>'">
+                                <span class="user-name"><?= cvcarts_h($studentName) ?></span>
+                            </div></td>
                             <td><?= cvcarts_h($student['email']) ?></td>
                             <td><?= $verified ? 'Verified' : 'Pending' ?></td>
                             <td><?= cvcarts_status_badge(ucwords(str_replace('_', ' ', (string)$student['account_status']))) ?></td>
@@ -166,7 +170,7 @@ $flashes = cvcarts_get_flash();
                                 <dialog id="student-details-<?= (int)$student['id'] ?>" class="app-modal" aria-labelledby="student-details-title-<?= (int)$student['id'] ?>">
                                     <div class="modal-shell">
                                         <header class="modal-header">
-                                            <div><h2 id="student-details-title-<?= (int)$student['id'] ?>"><?= cvcarts_h(trim($student['first_name'] . ' ' . ($student['middle_name'] ?? '') . ' ' . $student['last_name'])) ?></h2><p>Student account details.</p></div>
+                                            <div><h2 id="student-details-title-<?= (int)$student['id'] ?>"><?= cvcarts_h($studentName) ?></h2><p>Student account details.</p></div>
                                             <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
                                         </header>
                                         <div class="modal-body">
@@ -185,8 +189,8 @@ $flashes = cvcarts_get_flash();
                                 <?php if ($verified): ?>
                                     <form method="post" action="<?= cvcarts_h(cvcarts_url($route)) ?>">
                                         <input type="hidden" name="csrf_token" value="<?= cvcarts_h(cvcarts_csrf_token()) ?>"><input type="hidden" name="student_id" value="<?= (int)$student['id'] ?>">
-                                        <?php if ((int)$student['is_active'] === 1): ?><button class="btn btn-small btn-danger" name="account_action" value="suspend" type="submit" data-confirm="Suspend <?= cvcarts_h(trim($student['first_name'] . ' ' . $student['last_name'])) ?>? The student will no longer be able to sign in." data-confirm-title="Suspend student?" data-confirm-label="Suspend Account" data-confirm-type="error">Suspend</button>
-                                        <?php else: ?><button class="btn btn-small" name="account_action" value="activate" type="submit" data-confirm="Activate <?= cvcarts_h(trim($student['first_name'] . ' ' . $student['last_name'])) ?>?">Activate</button><?php endif; ?>
+                                        <?php if ((int)$student['is_active'] === 1): ?><button class="btn btn-small btn-danger" name="account_action" value="suspend" type="submit" data-confirm="Suspend <?= cvcarts_h($studentName) ?>? The student will no longer be able to sign in." data-confirm-title="Suspend student?" data-confirm-label="Suspend Account" data-confirm-type="error">Suspend</button>
+                                        <?php else: ?><button class="btn btn-small" name="account_action" value="activate" type="submit" data-confirm="Activate <?= cvcarts_h($studentName) ?>?">Activate</button><?php endif; ?>
                                     </form>
                                 <?php else: ?>Email verification required<?php endif; ?>
                             </td>

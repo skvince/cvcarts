@@ -141,15 +141,26 @@
   white-space: nowrap;
 }
 
-.inventory-size-details .table {
-  min-width: 250px;
+.inventory-size-details {
+  display: block;
+  max-width: 100%;
+}
+
+.inventory-size-details > table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
   margin-top: 8px;
 }
 
-.inventory-size-details .table th,
-.inventory-size-details .table td {
+.inventory-size-details > table th,
+.inventory-size-details > table td {
   padding: 8px;
   font-size: var(--fs-caption);
+}
+
+.inventory-size-details > table th {
+  white-space: normal;
 }
 
 /* ---- Inactive rows ---- */

@@ -474,8 +474,13 @@ label:has(> :is(input, select, textarea)[required]):not(:has(input[type="checkbo
 
 .table-wrapper {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
     border-radius: 10px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -533,6 +538,111 @@ td {
 
 tbody tr:hover {
     background: #f7faf8;
+}
+
+/* Shared admin-table standard (User Management design) */
+.main-content .table-wrapper,
+.main-content .recent-orders-scroll {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.main-content .table-wrapper::-webkit-scrollbar,
+.main-content .recent-orders-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.main-content .table-wrapper::-webkit-scrollbar-thumb,
+.main-content .recent-orders-scroll::-webkit-scrollbar-thumb {
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: #b7cdbd;
+}
+
+.main-content .table-wrapper::-webkit-scrollbar-track,
+.main-content .recent-orders-scroll::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: #f2f7f3;
+}
+
+.main-content .table-wrapper > table > thead {
+    background: #f2f7f3;
+}
+
+.main-content .table-wrapper > table > thead > tr > th {
+    height: 46px;
+    padding: 13px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--deep-green);
+    font-size: var(--fs-small);
+    font-weight: var(--fw-bold);
+    line-height: 1.25;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.main-content .table-wrapper > table > tbody > tr > td {
+    min-height: 52px;
+    padding: 12px;
+    border-bottom: 1px solid #edf1ee;
+    color: #496653;
+    font-size: var(--fs-body);
+    line-height: 1.45;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+.main-content .table-wrapper > table > tbody > tr:hover {
+    background: #f7faf8;
+}
+
+.main-content .table-wrapper > table td:last-child,
+.main-content .table-wrapper > table th:last-child {
+    white-space: normal;
+}
+
+.main-content .table-wrapper > table td:last-child {
+    min-width: 150px;
+}
+
+.main-content .table-wrapper > table td:last-child:has(.btn),
+.main-content .table-wrapper > table td.action-cell {
+    display: table-cell;
+}
+
+.main-content .table-wrapper > table td:last-child .btn,
+.main-content .table-wrapper > table td.action-cell .btn {
+    margin: 2px;
+    min-height: var(--control-height-sm);
+    white-space: nowrap;
+}
+
+.main-content .table-wrapper > table td:last-child form,
+.main-content .table-wrapper > table td.action-cell form {
+    display: inline-flex;
+    margin: 0 2px;
+    vertical-align: middle;
+}
+
+/* Session timeout modal */
+.inactivity-modal {
+    width: min(460px, calc(100vw - 32px));
+}
+
+.inactivity-modal .modal-header {
+    border-bottom: 0;
+}
+
+.inactivity-modal #inactivity-countdown {
+    color: var(--emerald);
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
 }
 
 .currency-cell,

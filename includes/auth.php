@@ -15,6 +15,11 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 require_once __DIR__ . '/functions.php';
 
+    // Enforce server-side inactivity on every request made by an authenticated session.
+    if (isset($_SESSION['user_id']) && !cvcarts_enforce_session_timeout()) {
+        cvcarts_session_expired_response();
+    }
+
 if (!isset($_SESSION['flash'])) {
     $_SESSION['flash'] = [];
 }
