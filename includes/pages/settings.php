@@ -276,7 +276,7 @@ $flashes = cvcarts_get_flash();
                         <form method="post" enctype="multipart/form-data" action="<?php echo cvcarts_h(cvcarts_url($settingsRoute)); ?>" class="student-photo-form">
                             <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>">
                             <input type="hidden" name="upload_student_photo" value="1">
-                            <div class="form-field"><label class="form-label" for="student-profile-photo">Profile Photo</label><input class="form-control" id="student-profile-photo" type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-image-preview="#student-profile-avatar" required><p class="form-help">JPG, JPEG, PNG, or WEBP up to 2 MB.</p></div>
+                            <div class="form-field"><label class="form-label" for="student-profile-photo">Profile Photo</label><input class="form-control" id="student-profile-photo" type="file" name="profile_photo" accept="image/*" data-image-preview="#student-profile-avatar" data-image-resize="true" required><p class="form-help">Choose a photo from your device. Large photos are resized before upload; maximum processed size is 3.5 MB.</p></div>
                             <div class="form-field"><label class="form-label" for="student-photo-password">Current Password</label><input class="form-control" id="student-photo-password" type="password" name="current_password" autocomplete="current-password" required></div>
                             <button class="btn btn-small" type="submit">Save Profile Photo</button>
                         </form>

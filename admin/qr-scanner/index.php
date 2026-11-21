@@ -90,6 +90,7 @@ $csrfToken = cvcarts_csrf_token();
             const scanImageInput = document.getElementById('scan-image-file');
             const csrfToken = <?= json_encode($csrfToken, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
             const apiUrl = <?= json_encode(cvcarts_url('/api/qr/claim.php'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const barcodeApiUrl = <?= json_encode(cvcarts_url('/api/admin/barcode_lookup.php'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
             let scanning = false;
             let cameraRunning = false;
@@ -106,6 +107,15 @@ $csrfToken = cvcarts_csrf_token();
             let cameraSupported = typeof window.Html5Qrcode === 'function';
             let cameraDevices = [];
             let activeCameraId = '';
+
+            const looksMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '')
+                || (navigator.maxTouchPoints > 0 && (matchMedia('(pointer: coarse)').matches));
+            const hasRearCameraCapability = looksMobile && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+            if (hasRearCameraCapability) {
+                scanImageInput.setAttribute('capture', 'environment');
+            } else {
+                scanImageInput.removeAttribute('capture');
+            }
 
             function setText(id, value) {
                 document.getElementById(id).textContent = value || '—';
@@ -218,6 +228,61 @@ $csrfToken = cvcarts_csrf_token();
                 lastScannedToken = currentToken;
                 manualOrderInput.value = '';
                 currentOrderClaimable = false;
+                const isLikelyBarcode = /^[0-9]{8,14}$/.test(currentToken) || /^[A-Za-z0-9_-]{5,64}$/.test(currentToken);
+                fetch(barcodeApiUrl + '?barcode=' + encodeURIComponent(currentToken), {credentials: 'same-origin'})
+                    .then(function (response) { return response.json().then(function (data) { return {ok: response.ok, data: data}; }); })
+                    .then(function (barcodeResult) {
+                        if (barcodeResult.ok && barcodeResult.data.success && barcodeResult.data.product) {
+                            const product = barcodeResult.data.product;
+                            setText('order-number', product.barcode || currentToken);
+                            setText('student-name', product.name);
+                            setText('student-email', product.category || '—');
+                            setText('order-status', product.stock > 0 ? 'In Stock' : 'Out of Stock');
+                            setText('payment-status', String(product.stock) + ' remaining');
+                            setText('payment-method', 'Inventory');
+                            setText('total-amount', '₱' + Number(product.price).toFixed(2));
+                            setText('order-date', '—');
+                            setText('claim-date', '—');
+                            setText('claimed-by', '—');
+                            const itemRow = document.createElement('tr');
+                            [product.name, '—', String(product.stock), '₱' + Number(product.price).toFixed(2)].forEach(function (value) {
+                                const cell = document.createElement('td');
+                                cell.textContent = value;
+                                itemRow.appendChild(cell);
+                            });
+                            document.getElementById('order-items').replaceChildren(itemRow);
+                            claimButton.hidden = true;
+                            resultPanel.hidden = false;
+                            resultMessage.textContent = 'Matching inventory product found.';
+                            showMessage('Product Found: ' + product.name, 'success');
+                            window.closeAlert();
+                            scanning = false;
+                            return true;
+                        }
+                        return false;
+                    })
+                    .then(function (matched) {
+                        if (matched) return;
+                        if (isLikelyBarcode && !/^[A-Za-z0-9_-]{24,64}$/.test(currentToken)) {
+                            resultPanel.hidden = false;
+                            document.getElementById('order-items').replaceChildren();
+                            claimButton.hidden = true;
+                            setText('order-number', currentToken);
+                            setText('student-name', '—');
+                            setText('student-email', '—');
+                            setText('order-status', 'Product Not Found');
+                            setText('payment-status', 'Not in inventory');
+                            setText('payment-method', '—');
+                            setText('total-amount', '—');
+                            setText('order-date', '—');
+                            setText('claim-date', '—');
+                            setText('claimed-by', '—');
+                            resultMessage.textContent = 'Product Not Found';
+                            showMessage('Product Not Found', 'error');
+                            scanning = false;
+                            setRequestBusy(false);
+                            return;
+                        }
                 setRequestBusy(true);
                 resultPanel.hidden = true;
                 claimButton.hidden = true;
@@ -252,6 +317,7 @@ $csrfToken = cvcarts_csrf_token();
                         scanning = false;
                         setRequestBusy(false);
                         claimButton.disabled = claimButton.hidden || !currentOrderClaimable;
+                    });
                     });
             }
 
@@ -660,10 +726,6 @@ $csrfToken = cvcarts_csrf_token();
 
             function scanImageFile(file) {
                 if (!file) return;
-                if (!cameraSupported) {
-                    showMessage('Image scanning is unavailable because the QR scanner library did not load. Enter the order number manually.', 'error');
-                    return;
-                }
                 if (typeof file.type === 'string' && !file.type.startsWith('image/')) {
                     showMessage('Choose an image file containing the order QR code.', 'error');
                     scanImageInput.value = '';
@@ -671,17 +733,37 @@ $csrfToken = cvcarts_csrf_token();
                 }
                 if (imageScanBusy || scanning) return;
 
-                try {
-                    createScanner();
-                } catch (error) {
-                    showMessage('The QR scanner could not initialize. Enter the order number manually.', 'error');
-                    return;
-                }
-
                 imageScanBusy = true;
                 setRequestBusy(true);
-                showMessage('Reading the QR code from the selected image...', 'success');
-                stopCamera().then(function () {
+                showMessage('Reading the barcode or QR code from the selected image...', 'success');
+                stopCamera().then(async function () {
+                    if ('BarcodeDetector' in window) {
+                        try {
+                            const detector = new window.BarcodeDetector({
+                                formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code']
+                            });
+                            const bitmap = await createImageBitmap(file);
+                            const codes = await detector.detect(bitmap);
+                            if (bitmap.close) bitmap.close();
+                            if (codes && codes.length && codes[0].rawValue) {
+                                if (typeof scanner === 'object' && scanner && typeof scanner.clear === 'function') scanner.clear();
+                                imageScanBusy = false;
+                                setRequestBusy(false);
+                                onScanSuccess(codes[0].rawValue);
+                                return;
+                            }
+                        } catch (error) {
+                            // Fall back to the loaded QR/image scanning library.
+                        }
+                    }
+                    if (!cameraSupported) {
+                        throw new Error('Image scanning is unavailable because the scanner library did not load.');
+                    }
+                    try {
+                        createScanner();
+                    } catch (error) {
+                        throw new Error('The scanner could not initialize.');
+                    }
                     if (typeof scanner.scanFile !== 'function') {
                         throw new Error('Image scanning is not supported by this browser.');
                     }
@@ -690,7 +772,7 @@ $csrfToken = cvcarts_csrf_token();
                     if (typeof scanner.clear === 'function') scanner.clear();
                     imageScanBusy = false;
                     setRequestBusy(false);
-                    onScanSuccess(decodedText);
+                    if (decodedText) onScanSuccess(decodedText);
                 }).catch(function () {
                     let cleanupFailed = false;
                     if (scanner && typeof scanner.clear === 'function') {

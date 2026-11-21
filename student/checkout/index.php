@@ -230,6 +230,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_checkout'])) 
         $db->prepare('INSERT INTO notifications (user_id, title, message, related_order_id) VALUES (:user_id, :title, :message, :order_id)')->execute([
             'user_id' => $user['id'], 'title' => 'Order placed', 'message' => 'Your order ' . $orderReference . ' has been created.', 'order_id' => $orderId,
         ]);
+        cvcarts_add_admin_notification($db, 'New Order', 'A new order ' . $orderReference . ' was placed. Review it in Order Status.', $orderId);
+        cvcarts_sync_stock_notifications($db);
         cvcarts_emit_realtime_event($db, 'order.created', 'admin');
         cvcarts_emit_realtime_event($db, 'order.updated', 'student', (int)$user['id']);
         cvcarts_emit_realtime_event($db, 'catalog.updated', 'public');

@@ -17,6 +17,7 @@ if (is_string($token) && preg_match('/^[a-f0-9]{64}$/i', $token)) {
             $db->prepare('UPDATE account_tokens SET used_at = NOW() WHERE id = :id')->execute(['id' => $row['token_id']]);
             $db->prepare("UPDATE account_tokens SET used_at = COALESCE(used_at, NOW()) WHERE user_id = :user_id AND token_type = 'student_verification' AND id <> :token_id")
                 ->execute(['user_id' => $row['user_id'], 'token_id' => $row['token_id']]);
+            cvcarts_add_admin_notification($db, 'New Customer Registration', 'Customer ' . trim((string)$row['first_name']) . ' successfully verified and registered.');
             cvcarts_emit_realtime_event($db, 'users.updated', 'admin');
             cvcarts_emit_realtime_event($db, 'user.updated', 'student', (int)$row['user_id']);
             $db->commit();

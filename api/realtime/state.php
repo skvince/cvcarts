@@ -17,7 +17,7 @@ if ($user['role'] === 'admin') {
     $alerts = cvcarts_admin_alerts($db);
     echo json_encode([
         'role' => 'admin',
-        'notification_count' => (int)$alerts['low_stock_count'] + (int)$alerts['pending_payments'] + (int)$alerts['ready'],
+        'notification_count' => cvcarts_admin_notification_count($db, (int)$user['id']),
         'pending_payments' => (int)$alerts['pending_payments'],
         'payment_verification' => (int)$alerts['payment_verification'],
         'ready_orders' => (int)$alerts['ready'],

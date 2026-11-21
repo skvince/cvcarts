@@ -73,6 +73,7 @@ function cvcarts_admin_review_payment(PDO $db, int $orderId, int $adminId, strin
             cvcarts_ensure_order_qr_token($db, $orderId);
             cvcarts_record_order_status($db, $orderId, $order['order_status'], 'Ready to Claim', $adminId, 'Cash payment received and verified.');
             cvcarts_add_notification($db, (int)$order['user_id'], 'Cash payment received', 'Cash payment for order ' . $order['reference_number'] . ' has been confirmed. Your receipt and claiming QR code are ready.', $orderId);
+            cvcarts_add_admin_notification($db, 'Order Status Updated', 'Order ' . $order['reference_number'] . ' is now Ready to Claim.', $orderId);
             $activity = 'Cash payment confirmed for ' . $order['reference_number'] . '.';
         } else {
             if ($order['payment_method'] === 'Cash' || $payment['status'] !== 'Pending Verification' || $order['payment_status'] !== 'Pending Verification' || $order['order_status'] !== 'Payment Verification') {
@@ -93,6 +94,7 @@ function cvcarts_admin_review_payment(PDO $db, int $orderId, int $adminId, strin
                 cvcarts_ensure_order_qr_token($db, $orderId);
                 cvcarts_record_order_status($db, $orderId, $order['order_status'], 'Ready to Claim', $adminId, 'Online payment approved.');
                 cvcarts_add_notification($db, (int)$order['user_id'], 'Payment approved', 'Payment for order ' . $order['reference_number'] . ' was approved. Your receipt and claiming QR code are ready.', $orderId);
+                cvcarts_add_admin_notification($db, 'Order Status Updated', 'Payment approved for order ' . $order['reference_number'] . '; status is Ready to Claim.', $orderId);
                 $activity = 'Payment approved for ' . $order['reference_number'] . '.';
             } else {
                 $reason = trim($reason);
@@ -106,6 +108,7 @@ function cvcarts_admin_review_payment(PDO $db, int $orderId, int $adminId, strin
                     ->execute(['id' => $orderId]);
                 cvcarts_record_order_status($db, $orderId, $order['order_status'], 'Payment Rejected', $adminId, $reason);
                 cvcarts_add_notification($db, (int)$order['user_id'], 'Payment rejected', 'Payment for order ' . $order['reference_number'] . ' was rejected. Reason: ' . $reason, $orderId);
+                cvcarts_add_admin_notification($db, 'Order Status Updated', 'Payment rejected for order ' . $order['reference_number'] . '.', $orderId);
                 $activity = 'Payment rejected for ' . $order['reference_number'] . '.';
             }
         }
@@ -216,6 +219,7 @@ function cvcarts_admin_update_order_status(PDO $db, int $orderId, int $adminId, 
         }
         cvcarts_record_order_status($db, $orderId, $oldStatus, $newStatus, $adminId, $reason !== '' ? $reason : null);
         cvcarts_add_notification($db, (int)$order['user_id'], 'Order updated', 'Your order ' . $order['reference_number'] . ' is now ' . $newStatus . ($newStatus === 'Cancelled' ? '. Reason: ' . $reason : '.'), $orderId);
+        cvcarts_add_admin_notification($db, 'Order Status Updated', 'Order ' . $order['reference_number'] . ' changed from ' . $oldStatus . ' to ' . $newStatus . '.', $orderId);
         $db->prepare('INSERT INTO admin_activity (admin_id, action, details) VALUES (:admin_id, :action, :details)')
             ->execute([
                 'admin_id' => $adminId,
@@ -262,6 +266,8 @@ function cvcarts_student_cancel_order(PDO $db, int $orderId, int $userId): array
         cvcarts_restore_cancelled_order_inventory($db, $orderId, null);
         cvcarts_record_order_status($db, $orderId, 'Pending', 'Cancelled', $userId, $reason);
         cvcarts_add_notification($db, $userId, 'Order cancelled', 'Your order ' . $order['reference_number'] . ' was cancelled at your request.', $orderId);
+        cvcarts_add_admin_notification($db, 'Order Status Updated', 'Student cancelled order ' . $order['reference_number'] . '.', $orderId);
+        cvcarts_sync_stock_notifications($db);
         cvcarts_emit_realtime_event($db, 'order.updated', 'admin');
         cvcarts_emit_realtime_event($db, 'order.updated', 'student', $userId);
         cvcarts_emit_realtime_event($db, 'catalog.updated', 'public');

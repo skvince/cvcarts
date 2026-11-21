@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../functions.php';
 
 function cvcarts_admin_alerts(PDO $db): array {
+    cvcarts_sync_stock_notifications($db);
     $lowStock = cvcarts_low_stock_alerts($db);
 
     return [
@@ -11,6 +12,7 @@ function cvcarts_admin_alerts(PDO $db): array {
         'pending_payments' => (int)$db->query('SELECT COUNT(*) FROM orders WHERE payment_status IN ("Unpaid", "Pending Verification") AND order_status <> "Cancelled"')->fetchColumn(),
         'payment_verification' => (int)$db->query("SELECT COUNT(*) FROM orders WHERE payment_status = 'Pending Verification' AND order_status <> 'Cancelled'")->fetchColumn(),
         'ready' => (int)$db->query("SELECT COUNT(*) FROM orders WHERE payment_status = 'Paid' AND order_status = 'Ready to Claim' AND claim_date IS NULL")->fetchColumn(),
+        'notification_count' => cvcarts_admin_notification_count($db, (int)($_SESSION['user_id'] ?? 0)),
     ];
 }
 
@@ -21,6 +23,7 @@ function cvcarts_admin_header(array $user, array $alerts = []): void {
         'pending_payments' => 0,
         'payment_verification' => 0,
         'ready' => 0,
+        'notification_count' => 0,
     ];
     $alertTotal = (int)$alerts['low_stock_count'] + (int)$alerts['pending_payments'] + (int)$alerts['ready'];
     $dashboardUrl = cvcarts_url('/admin/dashboard.php');
@@ -29,49 +32,10 @@ function cvcarts_admin_header(array $user, array $alerts = []): void {
     <header class="top-header">
         <a class="header-brand" href="<?= cvcarts_h($dashboardUrl) ?>"><img src="<?= cvcarts_h(cvcarts_url('/assets/images/logo.png')) ?>" alt="CVCarts Logo" class="header-logo"></a>
         <div class="header-actions">
-            <details class="header-menu notification-menu">
-                <summary class="header-icon" aria-label="Notifications" title="Notifications">
-                    <i class="bi bi-bell" aria-hidden="true"></i>
-                    <?php if ($alertTotal > 0): ?><span class="notification-badge"><?= (int)$alertTotal ?></span><?php endif; ?>
-                </summary>
-                <div class="header-dropdown notification-dropdown">
-                    <div class="dropdown-title">
-                        <strong>Notifications</strong>
-                        <span><?= (int)$alertTotal ?> pending</span>
-                    </div>
-                    <?php if ((int)$alerts['pending_payments'] > 0): ?>
-                        <a class="dropdown-item" href="<?= cvcarts_h(cvcarts_url('/admin/order-status/index.php')) ?>">
-                            <span class="dropdown-item-icon" aria-hidden="true"><i class="bi bi-credit-card"></i></span>
-                            <span><strong data-sync-count="pending-payments"><?= (int)$alerts['pending_payments'] ?> pending payment<?= (int)$alerts['pending_payments'] === 1 ? '' : 's' ?></strong>
-                            <small><span data-sync-count="payment-verification"><?= (int)$alerts['payment_verification'] ?></span> awaiting verification</small></span>
-                        </a>
-                    <?php endif; ?>
-                    <?php if ((int)$alerts['ready'] > 0): ?>
-                        <a class="dropdown-item" href="<?= cvcarts_h(cvcarts_url('/admin/ready-to-claim/index.php')) ?>">
-                            <span class="dropdown-item-icon" aria-hidden="true"><i class="bi bi-bag-check"></i></span>
-                            <span><strong data-sync-count="ready-orders"><?= (int)$alerts['ready'] ?> ready to claim</strong>
-                            <small>Scan the claiming QR code to release orders</small></span>
-                        </a>
-                    <?php endif; ?>
-                    <?php foreach (array_slice($alerts['low_stock'], 0, 5) as $item): ?>
-                        <a class="dropdown-item" href="<?= cvcarts_h(cvcarts_url('/admin/inventory/index.php')) ?>">
-                            <span class="dropdown-item-icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
-                            <span><strong>Low stock: <?= cvcarts_h((string)$item['label']) ?></strong>
-                            <small>Only <?= (int)$item['stock'] ?> left in stock</small></span>
-                        </a>
-                    <?php endforeach; ?>
-                    <?php if ($alertTotal === 0): ?>
-                        <div class="dropdown-empty">You're all caught up. No low-stock or pending-payment alerts.</div>
-                    <?php endif; ?>
-                    <?php if ((int)$alerts['pending_payments'] > 0): ?>
-                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/order-status/index.php')) ?>">Review payments</a>
-                    <?php elseif ((int)$alerts['ready'] > 0): ?>
-                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/ready-to-claim/index.php')) ?>">Ready to Claim</a>
-                    <?php elseif ((int)$alerts['low_stock_count'] > 0): ?>
-                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/inventory/index.php')) ?>">View inventory</a>
-                    <?php endif; ?>
-                </div>
-            </details>
+            <a class="header-icon" href="<?= cvcarts_h(cvcarts_url('/admin/notifications/index.php')) ?>" aria-label="Notifications" title="Notifications">
+                <i class="bi bi-bell" aria-hidden="true"></i>
+                <?php if ((int)$alerts['notification_count'] > 0): ?><span class="notification-badge"><?= (int)$alerts['notification_count'] ?></span><?php endif; ?>
+            </a>
             <details class="header-menu profile-menu">
                 <summary class="admin-profile" aria-label="Open account menu">
                     <img src="<?= cvcarts_h(cvcarts_profile_image_url(is_string($user['profile_image'] ?? null) ? $user['profile_image'] : null)) ?>" alt="">
@@ -123,6 +87,11 @@ function cvcarts_admin_header(array $user, array $alerts = []): void {
 }
 
 function cvcarts_admin_sidebar(string $active): void {
+    $notificationCount = 0;
+    $currentUser = cvcarts_user();
+    if ($currentUser && $currentUser['role'] === 'admin') {
+        $notificationCount = cvcarts_admin_notification_count(cvcarts_db(), (int)$currentUser['id']);
+    }
     $items = [
         'dashboard' => ['bi-speedometer2', 'Dashboard', '/admin/dashboard.php'],
         'users' => ['bi-people', 'Users', '/admin/users/index.php'],
@@ -131,6 +100,7 @@ function cvcarts_admin_sidebar(string $active): void {
         'qr-scanner' => ['bi-qr-code-scan', 'QR Scanner', '/admin/qr-scanner/index.php'],
         'order-history' => ['bi-clock-history', 'Order History', '/admin/order-history/index.php'],
         'inventory' => ['bi-boxes', 'Inventory', '/admin/inventory/index.php'],
+        'notifications' => ['bi-bell', 'Notifications', '/admin/notifications/index.php'],
         'sales' => ['bi-bar-chart-line', 'Sales', '/admin/sales/index.php'],
         'settings' => ['bi-gear', 'Settings', '/admin/settings/index.php'],
     ];
@@ -139,7 +109,7 @@ function cvcarts_admin_sidebar(string $active): void {
         <nav class="sidebar-nav">
             <?php foreach ($items as $key => $item): ?>
                 <a href="<?= cvcarts_h(cvcarts_url($item[2])) ?>" <?= $key === $active ? 'class="active" aria-current="page"' : '' ?>>
-                    <span class="nav-icon" aria-hidden="true"><i class="bi <?= cvcarts_h($item[0]) ?>"></i></span> <?= cvcarts_h($item[1]) ?>
+                    <span class="nav-icon" aria-hidden="true"><i class="bi <?= cvcarts_h($item[0]) ?>"></i></span> <?= cvcarts_h($item[1]) ?><?php if ($key === 'notifications' && $notificationCount > 0): ?> <span class="sidebar-notification-badge"><?= (int)$notificationCount ?></span><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>

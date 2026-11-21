@@ -201,7 +201,7 @@ $flashes = cvcarts_get_flash();
                 <section class="product-grid">
                     <?php foreach ($products as $product): ?>
                         <article class="product-card">
-                            <img src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="<?php echo cvcarts_h($product['name']); ?>">
+                            <img src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="<?php echo cvcarts_h($product['name']); ?>" onerror="this.onerror=null;this.src='<?php echo cvcarts_h(cvcarts_url('/assets/images/default-product.svg')); ?>'">
                             <div class="product-card-body">
                                 <h2><?php echo cvcarts_h($product['name']); ?></h2>
                                 <p><?php echo cvcarts_h($product['category']); ?> &nbsp;·&nbsp; <?php echo (int)$product['has_sizes'] === 1 ? 'Stock varies by size' : 'Stock: ' . (int)$product['stock']; ?></p>
@@ -213,7 +213,7 @@ $flashes = cvcarts_get_flash();
                                     <header class="modal-header"><div><h2 id="product-title-<?php echo (int)$product['id']; ?>"><?php echo cvcarts_h($product['name']); ?></h2><p><?php echo cvcarts_h($product['category']); ?> · <?php echo cvcarts_format_money((float)$product['price']); ?></p></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></header>
                                     <div class="modal-body">
                                         <div class="product-details-layout">
-                                            <img class="product-details-image" src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="<?php echo cvcarts_h($product['name']); ?>">
+                                            <img class="product-details-image" src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="<?php echo cvcarts_h($product['name']); ?>" onerror="this.onerror=null;this.src='<?php echo cvcarts_h(cvcarts_url('/assets/images/default-product.svg')); ?>'">
                                             <div class="product-details-copy">
                                                 <p><?php echo cvcarts_h($product['description'] ?? ''); ?></p>
                                                 <p class="form-help"><?php echo (int)$product['has_sizes'] === 1 ? 'Choose a size to see its available stock.' : 'Available stock: ' . (int)$product['stock']; ?></p>

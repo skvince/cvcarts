@@ -212,6 +212,52 @@ function cvcarts_emit_realtime_event(PDO $db, string $eventType, string $audienc
     }
 }
 
+function cvcarts_add_admin_notification(PDO $db, string $title, string $message, ?int $orderId = null): void {
+    $adminQuery = $db->query("SELECT id FROM users WHERE role = 'admin' AND is_active = 1 AND account_status = 'active'");
+    $admins = $adminQuery->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($admins as $adminId) {
+        $check = $db->prepare('SELECT id FROM notifications WHERE user_id = :user_id AND title = :title AND message = :message AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1');
+        $check->execute(['user_id' => (int)$adminId, 'title' => $title, 'message' => $message]);
+        if ($check->fetchColumn() !== false) {
+            continue;
+        }
+        $db->prepare('INSERT INTO notifications (user_id, title, message, related_order_id) VALUES (:user_id, :title, :message, :order_id)')
+            ->execute(['user_id' => (int)$adminId, 'title' => $title, 'message' => $message, 'order_id' => $orderId]);
+    }
+    if ($admins) {
+        cvcarts_emit_realtime_event($db, 'notifications.updated', 'admin');
+    }
+}
+
+function cvcarts_admin_notification_count(PDO $db, ?int $adminId = null): int {
+    if ($adminId !== null) {
+        $stmt = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = :user_id AND is_read = 0');
+        $stmt->execute(['user_id' => $adminId]);
+        return (int)$stmt->fetchColumn();
+    }
+    $stmt = $db->query("SELECT COUNT(*) FROM notifications n INNER JOIN users u ON u.id = n.user_id WHERE u.role = 'admin' AND n.is_read = 0");
+    return (int)$stmt->fetchColumn();
+}
+
+function cvcarts_sync_stock_notifications(PDO $db): void {
+    $query = $db->query(
+        "SELECT p.id, p.name, p.barcode, p.stock, p.has_sizes, p.deleted_at,
+                (SELECT COALESCE(SUM(stock), 0) FROM product_sizes WHERE product_id = p.id AND is_active = 1) AS sized_stock
+         FROM products p WHERE p.is_active = 1 AND p.deleted_at IS NULL"
+    );
+    foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $product) {
+        $stock = (int)$product['has_sizes'] === 1 ? (int)$product['sized_stock'] : (int)$product['stock'];
+        $name = trim((string)$product['name']);
+        $sku = trim((string)($product['barcode'] ?? ''));
+        $identity = $name . ($sku !== '' ? ' (SKU: ' . $sku . ')' : '');
+        if ($stock === 0) {
+            cvcarts_add_admin_notification($db, 'Out of Stock', $identity . ' is now out of stock (0 remaining).');
+        } elseif ($stock < 10) {
+            cvcarts_add_admin_notification($db, 'Low Stock Alert', $identity . ' has ' . $stock . ' remaining and is below the 10-unit threshold.');
+        }
+    }
+}
+
 function cvcarts_store_payment_proof(array $upload): string {
     if ((int)($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
         || !isset($upload['tmp_name'], $upload['size'])
@@ -244,7 +290,7 @@ function cvcarts_store_payment_proof(array $upload): string {
 function cvcarts_product_image_url(?string $imageUrl): string {
     $value = trim((string)($imageUrl ?? ''));
     if ($value === '') {
-        return cvcarts_app_url('/assets/images/logo.png');
+        return cvcarts_url('/assets/images/default-product.svg');
     }
 
     if (preg_match('/^https?:\/\//i', $value) === 1) {
@@ -260,13 +306,15 @@ function cvcarts_store_product_image(array $upload, ?string $existingImage = nul
         || !is_string($upload['tmp_name'])
         || !is_uploaded_file($upload['tmp_name'])
         || (int)$upload['size'] < 1
-        || (int)$upload['size'] > 2 * 1024 * 1024) {
-        throw new RuntimeException('Product image must be a valid file no larger than 2 MB.');
+        || (int)$upload['size'] > 3584 * 1024) {
+        throw new RuntimeException('Product image must be a valid file no larger than 3.5 MB (3584 KB).');
     }
 
     $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($upload['tmp_name']);
     $allowedMimeTypes = ['image/jpeg' => '.jpg', 'image/png' => '.png', 'image/webp' => '.webp'];
-    if (!is_string($mimeType) || !isset($allowedMimeTypes[$mimeType])) {
+    $imageInfo = @getimagesize($upload['tmp_name']);
+    if (!is_string($mimeType) || !isset($allowedMimeTypes[$mimeType])
+        || !is_array($imageInfo) || !isset($imageInfo['mime']) || $imageInfo['mime'] !== $mimeType) {
         throw new RuntimeException('Product image must be a JPG, JPEG, PNG, or WEBP file.');
     }
 
@@ -281,14 +329,18 @@ function cvcarts_store_product_image(array $upload, ?string $existingImage = nul
         throw new RuntimeException('The product image could not be saved.');
     }
 
-    if (is_string($existingImage) && $existingImage !== '' && preg_match('/^https?:\/\//i', $existingImage) !== 1) {
-        $existingPath = __DIR__ . '/../' . ltrim($existingImage, '/');
-        if (is_file($existingPath) && $existingPath !== $target) {
-            @unlink($existingPath);
-        }
-    }
-
     return '/uploads/products/' . $filename;
+}
+
+function cvcarts_remove_product_image(?string $imageUrl): void {
+    $path = trim((string)($imageUrl ?? ''));
+    if (!preg_match('~^/uploads/products/[a-f0-9]{32}\.(?:jpg|png|webp)$~i', $path)) {
+        return;
+    }
+    $filePath = __DIR__ . '/../' . ltrim($path, '/');
+    if (is_file($filePath)) {
+        @unlink($filePath);
+    }
 }
 
 function cvcarts_store_profile_image(array $upload): string {
@@ -297,8 +349,8 @@ function cvcarts_store_profile_image(array $upload): string {
         || !is_string($upload['tmp_name'])
         || !is_uploaded_file($upload['tmp_name'])
         || (int)$upload['size'] < 1
-        || (int)$upload['size'] > 2 * 1024 * 1024) {
-        throw new RuntimeException('Choose a valid profile image no larger than 2 MB.');
+        || (int)$upload['size'] > 3584 * 1024) {
+        throw new RuntimeException('Choose a valid profile image no larger than 3.5 MB (3584 KB).');
     }
 
     $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($upload['tmp_name']);
@@ -559,11 +611,11 @@ function cvcarts_status_badge(string $status): string {
 
 function cvcarts_low_stock_alerts(PDO $db): array {
     $query = $db->query(
-        "SELECT p.name AS product_name, NULL AS size, p.stock AS stock
+        "SELECT p.name AS product_name, p.barcode AS barcode, NULL AS size, p.stock AS stock
          FROM products p
          WHERE p.is_active = 1 AND p.has_sizes = 0 AND p.stock < 10
          UNION ALL
-         SELECT p.name AS product_name, ps.size AS size, ps.stock AS stock
+         SELECT p.name AS product_name, p.barcode AS barcode, ps.size AS size, ps.stock AS stock
          FROM product_sizes ps
          INNER JOIN products p ON p.id = ps.product_id
          WHERE p.is_active = 1 AND ps.is_active = 1 AND ps.stock < 10
@@ -650,6 +702,14 @@ function cvcarts_update_product_inventory(PDO $db, int $productId, bool $hasSize
         $db->prepare('UPDATE products SET has_sizes = 0, stock = :stock WHERE id = :id')
             ->execute(['stock' => $regularStock, 'id' => $productId]);
         cvcarts_record_inventory_movement($db, $productId, null, null, $adminId, $regularStock - (int)$currentStock, 'admin_adjustment');
+        $nameQuery = $db->prepare('SELECT name FROM products WHERE id = :id');
+        $nameQuery->execute(['id' => $productId]);
+        $productName = (string)$nameQuery->fetchColumn();
+        $change = $regularStock - (int)$currentStock;
+        if ($change !== 0) {
+            cvcarts_add_admin_notification($db, 'Inventory Updated', $productName . ' stock was adjusted by ' . ($change > 0 ? '+' : '') . $change . ' to ' . $regularStock . ' remaining.');
+        }
+        cvcarts_sync_stock_notifications($db);
         return;
     }
 
@@ -680,4 +740,11 @@ function cvcarts_update_product_inventory(PDO $db, int $productId, bool $hasSize
 
     $db->prepare('UPDATE products SET has_sizes = 1, stock = (SELECT COALESCE(SUM(stock), 0) FROM product_sizes WHERE product_id = :size_product_id AND is_active = 1) WHERE id = :product_id')
         ->execute(['size_product_id' => $productId, 'product_id' => $productId]);
+    $nameQuery = $db->prepare('SELECT name FROM products WHERE id = :id');
+    $nameQuery->execute(['id' => $productId]);
+    $productName = (string)$nameQuery->fetchColumn();
+    $stockQuery = $db->prepare('SELECT COALESCE(SUM(stock), 0) FROM product_sizes WHERE product_id = :product_id AND is_active = 1');
+    $stockQuery->execute(['product_id' => $productId]);
+    cvcarts_add_admin_notification($db, 'Inventory Updated', $productName . ' size inventory was adjusted; total stock is now ' . (int)$stockQuery->fetchColumn() . ' remaining.');
+    cvcarts_sync_stock_notifications($db);
 }

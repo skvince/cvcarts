@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $db->beginTransaction();
             try {
+                $previousImage = $imageUrl === $existingImage ? null : $existingImage;
                 $editLock = $db->prepare('SELECT id FROM products WHERE id = :id AND deleted_at IS NULL FOR UPDATE');
                 $editLock->execute(['id' => $productId]);
                 if ($editLock->fetchColumn() === false) {
@@ -126,6 +127,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 cvcarts_emit_realtime_event($db, 'product.updated', 'admin');
                 cvcarts_emit_realtime_event($db, 'catalog.updated', 'public');
                 $db->commit();
+                if (is_string($previousImage) && $previousImage !== '') {
+                    cvcarts_remove_product_image($previousImage);
+                }
                 cvcarts_flash('success', 'Product details updated.');
             } catch (Throwable $e) {
                 if ($db->inTransaction()) {
@@ -385,7 +389,7 @@ $flashes = cvcarts_get_flash();
                             <div class="form-field regular-stock-field"><label class="form-label" for="product-stock">Regular stock</label><input class="form-control" id="product-stock" type="number" min="0" name="stock" value="0" required></div>
                             <div class="form-field size-stock-field" hidden><input type="hidden" class="size-stock-input" id="product-sizes" name="sizes"><button class="btn btn-small" type="button" data-modal-open="size-manager-dialog" data-size-manager="product-sizes">Manage Sizes and Stock</button><p class="form-help" data-size-summary="product-sizes">No size inventory configured.</p></div>
                             <div class="form-field"><label class="form-label" for="product-description">Description</label><textarea class="form-control" id="product-description" name="description" rows="3"></textarea></div>
-                            <div class="form-field"><label class="form-label" for="product-image-upload">Upload Image</label><input class="form-control" id="product-image-upload" type="file" name="image_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-image-preview="#product-image-preview" data-image-preview-initially-hidden="true"><img id="product-image-preview" class="inventory-current-thumb" src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="" hidden></div>
+                            <div class="form-field"><label class="form-label" for="product-image-upload">Upload Image</label><input class="form-control" id="product-image-upload" type="file" name="image_file" accept="image/*" data-image-preview="#product-image-preview" data-image-preview-initially-hidden="true" data-image-resize="true"><p class="form-help">Choose a photo from your device. Large photos are resized before upload; maximum processed size is 3.5 MB.</p><img id="product-image-preview" class="inventory-current-thumb" src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="" hidden></div>
                         </div>
                         <footer class="modal-footer"><button class="btn btn-small" type="button" data-modal-close>Cancel</button><button class="btn" type="submit">Save Product</button></footer>
                     </form>
@@ -411,7 +415,7 @@ $flashes = cvcarts_get_flash();
                                 <tr class="<?php echo (int)$product['is_active'] === 1 ? '' : 'is-archived'; ?>">
                                     <td>
                                         <div class="inventory-product">
-                                            <img class="inventory-product-image" src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="<?php echo cvcarts_h($product['name']); ?>">
+                                            <img class="inventory-product-image" src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="<?php echo cvcarts_h($product['name']); ?>" onerror="this.onerror=null;this.src='<?php echo cvcarts_h(cvcarts_url('/assets/images/default-product.svg')); ?>'">
                                             <div class="inventory-product-copy">
                                                 <strong><?php echo cvcarts_h($product['name']); ?></strong>
                                                 <?php if (!empty($product['description'])): ?><small><?php echo cvcarts_h($product['description']); ?></small><?php endif; ?>
@@ -441,7 +445,7 @@ $flashes = cvcarts_get_flash();
                                                         <div class="form-field"><label class="form-label" for="product-name-<?php echo (int)$product['id']; ?>">Name</label><input class="form-control" id="product-name-<?php echo (int)$product['id']; ?>" name="name" maxlength="150" value="<?php echo cvcarts_h($product['name']); ?>" required></div>
                                                         <div class="form-field"><label class="form-label" for="product-category-<?php echo (int)$product['id']; ?>">Category</label><input class="form-control" id="product-category-<?php echo (int)$product['id']; ?>" name="category" maxlength="100" value="<?php echo cvcarts_h($product['category']); ?>" required></div>
                                                         <div class="form-field"><label class="form-label" for="product-description-<?php echo (int)$product['id']; ?>">Description</label><textarea class="form-control" id="product-description-<?php echo (int)$product['id']; ?>" name="description" rows="3"><?php echo cvcarts_h($product['description'] ?? ''); ?></textarea></div>
-                                                        <div class="form-field"><label class="form-label" for="product-upload-<?php echo (int)$product['id']; ?>">Upload Image</label><input class="form-control" id="product-upload-<?php echo (int)$product['id']; ?>" type="file" name="image_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-image-preview="#product-current-image-<?php echo (int)$product['id']; ?>"><img id="product-current-image-<?php echo (int)$product['id']; ?>" src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="Current <?php echo cvcarts_h($product['name']); ?> image" class="inventory-current-thumb"></div>
+                                                        <div class="form-field"><label class="form-label" for="product-upload-<?php echo (int)$product['id']; ?>">Upload Image</label><input class="form-control" id="product-upload-<?php echo (int)$product['id']; ?>" type="file" name="image_file" accept="image/*" data-image-preview="#product-current-image-<?php echo (int)$product['id']; ?>" data-image-resize="true"><p class="form-help">Choose a photo from your device. Large photos are resized before upload; maximum processed size is 3.5 MB.</p><img id="product-current-image-<?php echo (int)$product['id']; ?>" src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="Current <?php echo cvcarts_h($product['name']); ?> image" class="inventory-current-thumb" onerror="this.onerror=null;this.src='<?php echo cvcarts_h(cvcarts_url('/assets/images/default-product.svg')); ?>'"></div>
                                                         <div class="form-field"><label class="form-label" for="product-price-<?php echo (int)$product['id']; ?>">Price</label><input class="form-control" id="product-price-<?php echo (int)$product['id']; ?>" type="number" min="0" step="0.01" name="price" value="<?php echo cvcarts_h((string)$product['price']); ?>" required></div>
                                                         <?php $sizeSelectorId = 'product-has-sizes-' . (int)$product['id']; ?>
                                                         <div class="form-field"><label class="form-label" for="<?php echo $sizeSelectorId; ?>">Does this product have sizes?</label><select class="form-select product-has-sizes" id="<?php echo $sizeSelectorId; ?>" name="has_sizes" data-original-sized="<?php echo (int)$product['has_sizes']; ?>"><option value="0" <?php echo (int)$product['has_sizes'] !== 1 ? 'selected' : ''; ?>>No</option><option value="1" <?php echo (int)$product['has_sizes'] === 1 ? 'selected' : ''; ?>>Yes</option></select></div>

@@ -253,6 +253,33 @@ body {
     min-height: 48px;
 }
 
+.auth-page--signup .input-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    color-scheme: dark;
+    padding-right: 42px;
+    text-overflow: ellipsis;
+    background-color: #102d1b;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #b8ff45 50%),
+        linear-gradient(135deg, #b8ff45 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 21px,
+        calc(100% - 12px) 21px;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+}
+
+.auth-page--signup .input-group select option {
+    background: #102d1b;
+    color: #f2fff5;
+}
+
+.auth-page--signup .input-group select option:checked {
+    background: #087b49;
+    color: #ffffff;
+}
+
 .auth-page--signup .terms-group {
     margin: 3px 0 14px;
 }

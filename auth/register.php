@@ -168,7 +168,7 @@ $flashes = cvcarts_get_flash();
 
                     <div class="input-group form-field-wide">
                         <label for="email">School Email Address</label>
-                        <input type="email" id="email" name="email" placeholder="name@cscqc.edu.ph" autocomplete="email" pattern="[A-Za-z0-9._%+-]+@cscqc\.edu\.ph" title="Use your official @cscqc.edu.ph school email address." required>
+                        <input type="email" id="email" name="email" placeholder="email@cscqc.edu.ph" autocomplete="email" pattern="[A-Za-z0-9._%+-]+@cscqc\.edu\.ph" title="Use your official @cscqc.edu.ph school email address." required>
                     </div>
 
                     <div class="input-group">

@@ -98,7 +98,7 @@ $flashes = cvcarts_get_flash();
                     <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>">
                     <div class="input-group">
                         <label for="identifier">Email</label>
-                        <input type="text" id="identifier" name="identifier" placeholder="name@cscqc.edu.ph" autocomplete="username" required>
+                        <input type="text" id="identifier" name="identifier" placeholder="email@cscqc.edu.ph" autocomplete="username" required>
                     </div>
 
                     <div class="input-group">

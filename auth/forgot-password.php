@@ -257,7 +257,7 @@ $flashes = cvcarts_get_flash();
                 <?php if (!$recoveryUser || $step === ''): ?>
                     <form method="post" action="<?php echo cvcarts_h($recoveryUrl); ?>">
                         <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>">
-                        <div class="input-group"><label for="email-identifier">School Email or Admin Username</label><input id="email-identifier" type="text" name="identifier" placeholder="name@cscqc.edu.ph or admin" autocomplete="username" required></div>
+                        <div class="input-group"><label for="email-identifier">School Email or Admin Username</label><input id="email-identifier" type="text" name="identifier" placeholder="email@cscqc.edu.ph or admin" autocomplete="username" required></div>
                         <button class="reset-btn" type="submit" name="action" value="request_email"><span>Recover Through Email</span></button>
                         <div class="divider"><span>OR</span></div>
                         <button class="reset-btn" type="submit" name="action" value="lookup_security"><span>Use Security Question</span></button>
