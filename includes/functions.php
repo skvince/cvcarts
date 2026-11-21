@@ -294,7 +294,15 @@ function cvcarts_product_image_url(?string $imageUrl): string {
     }
 
     if (preg_match('/^https?:\/\//i', $value) === 1) {
-        return $value;
+        $host = strtolower((string)parse_url($value, PHP_URL_HOST));
+        if (!in_array($host, ['localhost', '127.0.0.1', '::1', '[::1]'], true)) {
+            return $value;
+        }
+        $value = (string)parse_url($value, PHP_URL_PATH);
+    }
+
+    if (preg_match('~(?:^|/)(uploads/products/[a-f0-9]{32}\.(?:jpg|png|webp))$~i', $value, $matches) === 1) {
+        return cvcarts_url('/' . $matches[1]);
     }
 
     return cvcarts_url($value);

@@ -29,9 +29,11 @@ Do not use the example values or local XAMPP credentials on the hosted site. A p
 
 ## 4. Upload files
 
-Upload the application contents (not an extra enclosing project folder) into the domain's document root, typically `htdocs/`. Include `vendor/`; do not upload `.git/`, private migration exports, local backups, or private local uploads. Upload the configured `.env` only to the project root, and verify hidden `.htaccess` files are included. Upload any product images referenced by migrated rows; transfer payment proofs separately and keep them under `uploads/payment-proofs/`.
+Upload the application contents (not an extra enclosing project folder) into the domain's document root, typically `htdocs/`. Include `vendor/`; do not upload `.git/`, private migration exports, or local backups. Upload the configured `.env` only to the project root, and verify hidden `.htaccess` files are included.
 
-Use the hosting panel's normal permissions. Do not set directories to world-writable (`777`). The `uploads/` directory must be writable by PHP for image and payment-proof uploads; its `.htaccess` must remain in place to prevent script execution.
+Git intentionally excludes everything under `uploads/`, so the database export does not carry uploaded files. To keep migrated product images, copy the files from the local `uploads/products/` directory into `htdocs/uploads/products/` on InfinityFree, preserving their generated filenames and the `/uploads/products/...` paths stored in the database. If a product image was not copied or its path no longer exists, the inventory and shop show the default product image; re-upload it from the hosted Admin inventory page to replace it. Student profile photos are personal data and are not included in this transfer by default. Do not copy payment proofs into the public product-image directory; transfer them separately and keep them under `uploads/payment-proofs/`.
+
+Use the hosting panel's normal permissions. Do not set directories to world-writable (`777`). The `uploads/` directory must be writable by PHP for image and payment-proof uploads. Keep the repository versions of `uploads/.htaccess` and `uploads/products/.htaccess`: they prevent directory listing and deny script extensions. Avoid adding `Options -ExecCGI` to nested upload `.htaccess` files because shared hosts may reject it with HTTP 500 responses.
 
 ## 5. Production verification
 

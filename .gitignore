@@ -8,9 +8,6 @@
 /storage/logs/*
 /storage/email-logs/*
 
-# Private payment uploads
-/uploads/payment-proofs/*
-
 # Private, data-bearing database migration export
 /database/infinityfree-migration.sql
 
@@ -20,6 +17,16 @@
 /vendor/*
 !/vendor/.htaccess
 
-# User uploads
+# User uploads stay out of source control; retain only their access rules.
 /uploads/*
+!/uploads/.htaccess
+!/uploads/payment-proofs/
+!/uploads/products/
+!/uploads/profile-photos/
+/uploads/payment-proofs/*
+!/uploads/payment-proofs/.htaccess
+/uploads/products/*
+!/uploads/products/.htaccess
+/uploads/profile-photos/*
+!/uploads/profile-photos/.htaccess
 !.gitkeep
