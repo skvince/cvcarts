@@ -101,7 +101,7 @@ $stats = [
     )->fetchColumn(),
 
     'products' => (int)$db->query(
-        "SELECT COUNT(*) FROM products WHERE is_active = 1"
+        "SELECT COUNT(*) FROM products WHERE is_active = 1 AND deleted_at IS NULL"
     )->fetchColumn(),
 
     'orders' => (int)($monthlyOrderStats['total_orders'] ?? 0),

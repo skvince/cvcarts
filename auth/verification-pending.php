@@ -90,7 +90,7 @@ $flashes = cvcarts_get_flash();
                 <h2>Verify Your Email,<br><span>Join CVCarts.</span></h2>
                 <p class="brand-description">Your account is pending until your official school email address is verified.</p>
             </div>
-            <div class="brand-bottom"><div class="bottom-line"></div><span>SHOP SMART. LIVE EASY.</span></div>
+            <div class="brand-bottom"><span>SHOP SMART. LIVE EASY.</span></div>
         </section>
         <section class="auth-card">
             <div class="card-glow"></div>
@@ -107,7 +107,7 @@ $flashes = cvcarts_get_flash();
                 <p class="subtitle">Open the message and click “VERIFY MY EMAIL” within 15 minutes. Check your spam folder if it is not in your inbox.</p>
                 <form action="<?php echo cvcarts_h(cvcarts_url('/auth/verification-pending.php')); ?>" method="post">
                     <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>">
-                    <button type="submit" class="auth-btn" name="resend_verification" value="1"><span>Resend Verification Email</span><span class="arrow">→</span></button>
+                    <button type="submit" class="auth-btn" name="resend_verification" value="1"><span>Resend Verification Email</span></button>
                 </form>
                 <div class="divider"><span>OR</span></div>
                 <p class="switch-text"><a href="<?php echo cvcarts_h(cvcarts_url('/auth/login.php')); ?>">Return to Login</a></p>

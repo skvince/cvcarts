@@ -34,7 +34,7 @@ unset($_SESSION['registration_complete'], $_SESSION['registration_complete_name'
                 <h2>Shop Smarter,<br><span>Starting Today.</span></h2>
                 <p class="brand-description">Your student account is ready to use.</p>
             </div>
-            <div class="brand-bottom"><div class="bottom-line"></div><span>SHOP SMART. LIVE EASY.</span></div>
+            <div class="brand-bottom"><span>SHOP SMART. LIVE EASY.</span></div>
         </section>
         <section class="auth-card">
             <div class="card-glow"></div>
@@ -45,7 +45,7 @@ unset($_SESSION['registration_complete'], $_SESSION['registration_complete_name'
                     <h1>Email Verified</h1>
                     <p class="subtitle">Thank you, <?php echo cvcarts_h($firstName); ?>. Your school email has been verified and your account is active.</p>
                 </div>
-                <a class="auth-btn" href="<?php echo cvcarts_h(cvcarts_url('/auth/login.php')); ?>"><span>Go to Login</span><span class="arrow">→</span></a>
+                <a class="auth-btn" href="<?php echo cvcarts_h(cvcarts_url('/auth/login.php')); ?>"><span>Go to Login</span></a>
             </div>
         </section>
     </main>

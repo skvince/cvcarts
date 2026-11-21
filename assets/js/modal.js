@@ -274,8 +274,8 @@
             } else {
                 const target = pending > 0 ? '/admin/order-status/index.php'
                     : (ready > 0 ? '/admin/ready-to-claim/index.php' : '/admin/inventory/index.php');
-                const label = pending > 0 ? 'Review payments →'
-                    : (ready > 0 ? 'Ready to Claim →' : 'View inventory →');
+                const label = pending > 0 ? 'Review payments'
+                    : (ready > 0 ? 'Ready to Claim' : 'View inventory');
                 const footer = document.createElement('a');
                 footer.className = 'dropdown-footer';
                 footer.href = appBase + target;

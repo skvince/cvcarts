@@ -25,3 +25,9 @@ body {
 .auth-card .form-alert {
     margin-bottom: 12px;
 }
+
+label:has(+ :required, + * :required)::after,
+label:has(> :is(input, select, textarea)[required]):not(:has(input[type="checkbox"]))::after {
+    content: " *";
+    color: #ff6b6b;
+}

@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['add_to_cart']) || is
     $quantity = filter_var(is_string($_POST['quantity'] ?? null) ? $_POST['quantity'] : '', FILTER_VALIDATE_INT);
     $sizeInput = $_POST['size'] ?? '';
     $size = is_string($sizeInput) ? trim($sizeInput) : '';
-    $stmt = $db->prepare('SELECT * FROM products WHERE id = :id AND is_active = 1 LIMIT 1');
+    $stmt = $db->prepare('SELECT * FROM products WHERE id = :id AND is_active = 1 AND deleted_at IS NULL LIMIT 1');
     $stmt->execute(['id' => $productId]);
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$product || $quantity === false || $quantity < 1) {
@@ -85,7 +85,7 @@ if ($filterErrors) {
     $minPrice = null;
     $maxPrice = null;
 }
-$where = ['is_active = 1'];
+$where = ['is_active = 1', 'deleted_at IS NULL'];
 $params = [];
 if ($category !== '') {
     $where[] = 'category = :category';
@@ -132,7 +132,7 @@ $productSizes = [];
 foreach ($sizeQuery->fetchAll(PDO::FETCH_ASSOC) as $sizeRow) {
     $productSizes[(int)$sizeRow['product_id']][] = $sizeRow;
 }
-$categories = $db->query('SELECT DISTINCT category FROM products WHERE is_active = 1 ORDER BY category')->fetchAll(PDO::FETCH_COLUMN);
+$categories = $db->query('SELECT DISTINCT category FROM products WHERE is_active = 1 AND deleted_at IS NULL ORDER BY category')->fetchAll(PDO::FETCH_COLUMN);
 $flashes = cvcarts_get_flash();
 ?>
 <!DOCTYPE html>

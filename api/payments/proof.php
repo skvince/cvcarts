@@ -25,7 +25,7 @@ if (!$payment || (!$user || ($user['role'] !== 'admin' && (int)$payment['user_id
 
 $storedPath = (string)($payment['proof_path'] ?? '');
 $filename = basename(str_replace('\\', '/', $storedPath));
-if ($filename === '' || !preg_match('/^[a-f0-9]{32}\.(?:jpg|png|pdf)$/', $filename)) {
+if ($filename === '' || !preg_match('/^[a-f0-9]{32}\.(?:jpg|png|webp|pdf)$/', $filename)) {
     http_response_code(404);
     exit('Payment proof not found.');
 }
@@ -39,14 +39,14 @@ if ($proofDirectory === false || $proofPath === false || dirname($proofPath) !==
 
 $fileInfo = new finfo(FILEINFO_MIME_TYPE);
 $mimeType = $fileInfo->file($proofPath);
-if (!in_array($mimeType, ['image/jpeg', 'image/png', 'application/pdf'], true)) {
+if (!in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], true)) {
     http_response_code(415);
     exit('Unsupported payment proof format.');
 }
 
 header('Content-Type: ' . $mimeType);
 header('Content-Length: ' . (string)filesize($proofPath));
-header('Content-Disposition: inline; filename="payment-proof.' . ($mimeType === 'application/pdf' ? 'pdf' : ($mimeType === 'image/png' ? 'png' : 'jpg')) . '"');
+header('Content-Disposition: inline; filename="payment-proof.' . ($mimeType === 'application/pdf' ? 'pdf' : ($mimeType === 'image/png' ? 'png' : ($mimeType === 'image/webp' ? 'webp' : 'jpg'))) . '"');
 header('Cache-Control: private, no-store, max-age=0');
 header('X-Content-Type-Options: nosniff');
 readfile($proofPath);

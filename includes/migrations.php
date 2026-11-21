@@ -401,6 +401,42 @@ function cvcarts_migrate_product_and_pickup_options(PDO $db): void {
     }
 }
 
+function cvcarts_migrate_product_soft_deletion(PDO $db): void {
+    $migrationKey = 'product_soft_deletion_20261121_v1';
+    $db->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
+        migration_key VARCHAR(80) PRIMARY KEY,
+        applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB");
+    $check = $db->prepare('SELECT 1 FROM schema_migrations WHERE migration_key = :migration_key');
+    $check->execute(['migration_key' => $migrationKey]);
+    if ($check->fetchColumn()) {
+        return;
+    }
+
+    $lockName = 'cvcarts_' . $migrationKey;
+    $lock = $db->prepare('SELECT GET_LOCK(:lock_name, 10)');
+    $lock->execute(['lock_name' => $lockName]);
+    if ((int)$lock->fetchColumn() !== 1) {
+        throw new RuntimeException('Could not acquire the product deletion migration lock.');
+    }
+
+    try {
+        $check->execute(['migration_key' => $migrationKey]);
+        if ($check->fetchColumn()) {
+            return;
+        }
+
+        if (!cvcarts_column_exists($db, 'products', 'deleted_at')) {
+            $db->exec('ALTER TABLE products ADD COLUMN deleted_at DATETIME DEFAULT NULL');
+        }
+        $db->prepare('INSERT INTO schema_migrations (migration_key) VALUES (:migration_key)')
+            ->execute(['migration_key' => $migrationKey]);
+    } finally {
+        $release = $db->prepare('SELECT RELEASE_LOCK(:lock_name)');
+        $release->execute(['lock_name' => $lockName]);
+    }
+}
+
 function cvcarts_migrate_student_profile_images(PDO $db): void {
     $migrationKey = 'student_profile_images_20261117_v1';
     $db->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -515,6 +551,7 @@ function cvcarts_migrate(PDO $db): void {
         'product_sizes_pickup_slots_20261116_v1',
         'student_profile_images_20261117_v1',
         'realtime_events_20261120_v1',
+        'product_soft_deletion_20261121_v1',
     ];
     $placeholders = implode(', ', array_fill(0, count($migrationKeys), '?'));
 
@@ -537,5 +574,6 @@ function cvcarts_migrate(PDO $db): void {
     cvcarts_migrate_order_claim_qr($db);
     cvcarts_migrate_order_verification_dates($db);
     cvcarts_migrate_product_and_pickup_options($db);
+    cvcarts_migrate_product_soft_deletion($db);
     cvcarts_migrate_student_profile_images($db);
 }

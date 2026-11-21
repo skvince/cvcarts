@@ -279,7 +279,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
     min-height: 32px;
     padding: 0 11px;
     border: 1px solid #d8e5da;
@@ -290,11 +289,6 @@
     font-weight: var(--fw-semibold);
     white-space: nowrap;
     transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
-}
-
-.notification-view-hint span {
-    font-size: 18px;
-    line-height: 1;
 }
 
 .notification-card:hover .notification-view-hint {

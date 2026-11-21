@@ -307,3 +307,7 @@
   border: 1px solid var(--cv-border);
   border-radius: var(--cv-radius-sm);
 }
+
+.inventory-current-thumb[hidden] {
+  display: none;
+}

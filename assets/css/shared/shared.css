@@ -89,6 +89,26 @@ body {
     outline-offset: 3px;
 }
 
+label:has(+ :required, + * :required)::after,
+label:has(> :is(input, select, textarea)[required]):not(:has(input[type="checkbox"]))::after {
+    content: " *";
+    color: #d93025;
+}
+
+.form-image-preview {
+    display: block;
+    max-width: min(100%, 240px);
+    max-height: 240px;
+    margin-top: 8px;
+    object-fit: contain;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.form-image-preview[hidden] {
+    display: none;
+}
+
 .top-strip {
     height: 27px;
     display: flex;

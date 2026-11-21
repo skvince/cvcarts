@@ -245,6 +245,7 @@ $flashes = cvcarts_get_flash();
         <section class="forgot-card">
             <div class="card-glow"></div>
             <div class="card-content">
+                <?php require __DIR__ . '/../includes/auth-mobile-logo.php'; ?>
                 <div class="card-header">
                     <div class="welcome-icon" aria-hidden="true"><i class="bi bi-shield-lock"></i></div>
                     <p class="welcome-label">ACCOUNT RECOVERY</p>
@@ -257,9 +258,9 @@ $flashes = cvcarts_get_flash();
                     <form method="post" action="<?php echo cvcarts_h($recoveryUrl); ?>">
                         <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>">
                         <div class="input-group"><label for="email-identifier">School Email or Admin Username</label><input id="email-identifier" type="text" name="identifier" placeholder="name@cscqc.edu.ph or admin" autocomplete="username" required></div>
-                        <button class="reset-btn" type="submit" name="action" value="request_email"><span>Recover Through Email</span><span class="arrow">→</span></button>
+                        <button class="reset-btn" type="submit" name="action" value="request_email"><span>Recover Through Email</span></button>
                         <div class="divider"><span>OR</span></div>
-                        <button class="reset-btn" type="submit" name="action" value="lookup_security"><span>Use Security Question</span><span class="arrow">→</span></button>
+                        <button class="reset-btn" type="submit" name="action" value="lookup_security"><span>Use Security Question</span></button>
                     </form>
                 <?php elseif (!empty($_SESSION['admin_recovery_verified_user_id'])): ?>
                     <form method="post" action="<?php echo cvcarts_h($recoveryUrl); ?>">
@@ -267,21 +268,21 @@ $flashes = cvcarts_get_flash();
                         <div class="input-group"><label for="new-password">New Password</label><input id="new-password" type="password" name="new_password" autocomplete="new-password" minlength="12" required></div>
                         <div class="input-group"><label for="confirm-password">Confirm New Password</label><input id="confirm-password" type="password" name="confirm_password" autocomplete="new-password" minlength="12" required></div>
                         <p class="subtitle">Use at least 12 characters with uppercase, lowercase, a number, and a symbol.</p>
-                        <button class="reset-btn" type="submit"><span>Set New Password</span><span class="arrow">→</span></button>
+                        <button class="reset-btn" type="submit"><span>Set New Password</span></button>
                     </form>
                 <?php elseif ($step === 'otp' && !empty($_SESSION['admin_recovery_otp_sent'])): ?>
                     <p class="subtitle">Enter the 6-digit code sent to <?php echo cvcarts_h(cvcarts_mask_email($recoveryUser['email'])); ?>.</p>
                     <form method="post" action="<?php echo cvcarts_h($recoveryUrl); ?>">
                         <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>"><input type="hidden" name="action" value="verify_otp">
                         <div class="input-group"><label for="otp">Email Verification Code</label><input id="otp" type="text" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></div>
-                        <button class="reset-btn" type="submit"><span>Verify Code</span><span class="arrow">→</span></button>
+                        <button class="reset-btn" type="submit"><span>Verify Code</span></button>
                     </form>
                 <?php else: ?>
                     <p class="recovery-question"><?php echo cvcarts_h($recoveryUser['security_question']); ?></p>
                     <form method="post" action="<?php echo cvcarts_h($recoveryUrl); ?>">
                         <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>"><input type="hidden" name="action" value="verify_answer">
                         <div class="input-group"><label for="security-answer">Security Answer</label><input id="security-answer" type="password" name="security_answer" autocomplete="off" required></div>
-                        <button class="reset-btn" type="submit"><span>Verify Answer</span><span class="arrow">→</span></button>
+                        <button class="reset-btn" type="submit"><span>Verify Answer</span></button>
                     </form>
                 <?php endif; ?>
                 <div class="divider"><span>OR</span></div>

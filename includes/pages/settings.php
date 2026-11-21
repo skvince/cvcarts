@@ -287,11 +287,11 @@ $flashes = cvcarts_get_flash();
                 <section class="panel panel-narrow">
                     <div class="panel-heading"><h2>Student Profile</h2></div>
                     <div class="student-photo-editor">
-                        <img class="student-profile-avatar" src="<?php echo cvcarts_h(cvcarts_profile_image_url($user['profile_image'] ?? null)); ?>" alt="Your profile photo">
+                        <img id="student-profile-avatar" class="student-profile-avatar" src="<?php echo cvcarts_h(cvcarts_profile_image_url($user['profile_image'] ?? null)); ?>" alt="Your profile photo">
                         <form method="post" enctype="multipart/form-data" action="<?php echo cvcarts_h(cvcarts_url($settingsRoute)); ?>" class="student-photo-form">
                             <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>">
                             <input type="hidden" name="upload_student_photo" value="1">
-                            <div class="form-field"><label class="form-label" for="student-profile-photo">Profile Photo</label><input class="form-control" id="student-profile-photo" type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp" required><p class="form-help">JPG, PNG, or WEBP up to 2 MB.</p></div>
+                            <div class="form-field"><label class="form-label" for="student-profile-photo">Profile Photo</label><input class="form-control" id="student-profile-photo" type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-image-preview="#student-profile-avatar" required><p class="form-help">JPG, JPEG, PNG, or WEBP up to 2 MB.</p></div>
                             <div class="form-field"><label class="form-label" for="student-photo-password">Current Password</label><input class="form-control" id="student-photo-password" type="password" name="current_password" autocomplete="current-password" required></div>
                             <button class="btn btn-small" type="submit">Save Profile Photo</button>
                         </form>
@@ -370,5 +370,6 @@ $flashes = cvcarts_get_flash();
         </main>
     </div>
     <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/modal.js')); ?>"></script>
+    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/image-preview.js?v=' . filemtime(__DIR__ . '/../../assets/js/image-preview.js'))); ?>" defer></script>
 </body>
 </html>

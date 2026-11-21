@@ -105,11 +105,11 @@ $flashes = cvcarts_get_flash();
                         <input type="hidden" name="token" value="<?php echo cvcarts_h($token); ?>">
                         <div class="input-group"><label for="new-password">New Password</label><input id="new-password" type="password" name="new_password" autocomplete="new-password" minlength="12" required></div>
                         <div class="input-group"><label for="confirm-password">Confirm New Password</label><input id="confirm-password" type="password" name="confirm_password" autocomplete="new-password" minlength="12" required></div>
-                        <button class="reset-btn" type="submit"><span>Reset Password</span><span class="arrow">→</span></button>
+                        <button class="reset-btn" type="submit"><span>Reset Password</span></button>
                     </form>
                 <?php else: ?>
                     <p class="subtitle">Request a new reset link or return to sign in.</p>
-                    <a class="reset-btn" href="<?php echo cvcarts_h(cvcarts_url('/auth/forgot-password.php')); ?>"><span>Request Another Link</span><span class="arrow">→</span></a>
+                    <a class="reset-btn" href="<?php echo cvcarts_h(cvcarts_url('/auth/forgot-password.php')); ?>"><span>Request Another Link</span></a>
                 <?php endif; ?>
                 <div class="divider"><span>OR</span></div><p class="back-text"><a href="<?php echo cvcarts_h(cvcarts_url('/auth/login.php')); ?>">Back to Login</a></p>
             </div>

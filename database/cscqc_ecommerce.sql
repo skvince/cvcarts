@@ -62,6 +62,8 @@ CREATE TABLE `products` (
 
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
 
+  `deleted_at` datetime DEFAULT NULL,
+
   `created_at` timestamp NULL DEFAULT current_timestamp(),
 
   `has_sizes` tinyint(1) NOT NULL DEFAULT 0,

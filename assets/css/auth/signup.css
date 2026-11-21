@@ -229,9 +229,12 @@ body {
 
 .brand-description {
     max-width: 460px;
-    color: #c0d8c6;
     font-size: 15px;
     line-height: 1.7;
+    background: linear-gradient(90deg, #e1f4e5, #b8ff85);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
 }
 
 
@@ -242,18 +245,6 @@ body {
     align-items: center;
     gap: 13px;
     margin-top: 38px;
-}
-
-.bottom-line {
-    width: 42px;
-    height: 3px;
-    border-radius: 10px;
-
-    background: linear-gradient(
-        90deg,
-        #20c96b,
-        #b8ff45
-    );
 }
 
 .brand-bottom span {
@@ -755,11 +746,6 @@ body {
     transition: all 0.3s ease;
 }
 
-.auth-btn .arrow {
-    font-size: 20px;
-    transition: transform 0.3s ease;
-}
-
 .auth-btn:hover {
     background: linear-gradient(
         110deg,
@@ -773,10 +759,6 @@ body {
     box-shadow:
         0 12px 30px rgba(32, 201, 107, 0.38),
         0 0 25px rgba(165, 239, 69, 0.22);
-}
-
-.auth-btn:hover .arrow {
-    transform: translateX(5px);
 }
 
 .auth-btn:active {
@@ -834,81 +816,6 @@ body {
     text-decoration: underline;
 }
 
-
-/* =========================================
-   RESPONSIVE DESIGN
-========================================= */
-
-@media (max-width: 950px) {
-    body {
-        padding: 30px;
-    }
-
-    .auth-container {
-        grid-template-columns: minmax(0, 1fr) 400px;
-        gap: 35px;
-    }
-
-    .brand-logo {
-        max-width: 360px;
-    }
-
-    .card-content {
-        padding: 32px 28px;
-    }
-}
-
-@media (max-width: 720px) {
-    body {
-        padding: 35px 20px;
-    }
-
-    .auth-container {
-        grid-template-columns: 1fr;
-        justify-items: center;
-        gap: 30px;
-    }
-
-    .brand-section {
-        align-items: center;
-        text-align: center;
-    }
-
-    .brand-logo {
-        width: min(90%, 340px);
-    }
-
-    .brand-content h2 {
-        font-size: 24px;
-    }
-
-    .brand-description {
-        font-size: 14px;
-    }
-
-    .brand-bottom {
-        justify-content: center;
-    }
-
-    .auth-card {
-        max-width: 480px;
-    }
-
-    .name-fields {
-        grid-template-columns: 1fr;
-        gap: 0;
-    }
-}
-
-@media (max-width: 400px) {
-    .brand-content h2 {
-        font-size: 22px;
-    }
-
-    .card-content {
-        padding: 28px 20px;
-    }
-}
 
 @media (prefers-reduced-motion: reduce) {
     *,

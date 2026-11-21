@@ -35,7 +35,7 @@ $csrfToken = cvcarts_csrf_token();
                         <button id="stop-camera" class="btn btn-small btn-secondary" type="button" disabled>Stop Scanner</button>
                         <button id="switch-camera" class="btn btn-small btn-secondary" type="button" hidden disabled>Switch Camera</button>
                         <button id="scan-image" class="btn btn-small btn-secondary" type="button">Scan QR from Photo</button>
-                        <input id="scan-image-file" type="file" accept="image/*" capture="environment" hidden aria-describedby="camera-help">
+                        <input id="scan-image-file" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden aria-describedby="camera-help">
                     </div>
                     <div id="status" class="flash-message" role="status" aria-live="polite">Ready to scan a pickup QR code.</div>
                     <form id="manual-verify-form" class="form-field">

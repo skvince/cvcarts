@@ -196,9 +196,9 @@ function cvcarts_store_payment_proof(array $upload): string {
     }
 
     $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($upload['tmp_name']);
-    $allowedMimeTypes = ['image/jpeg' => '.jpg', 'image/png' => '.png', 'application/pdf' => '.pdf'];
+    $allowedMimeTypes = ['image/jpeg' => '.jpg', 'image/png' => '.png', 'image/webp' => '.webp', 'application/pdf' => '.pdf'];
     if (!is_string($mimeType) || !isset($allowedMimeTypes[$mimeType])) {
-        throw new RuntimeException('Payment proof must be a JPEG, PNG, or PDF file.');
+        throw new RuntimeException('Payment proof must be a JPG, JPEG, PNG, WEBP, or PDF file.');
     }
 
     $directory = __DIR__ . '/../uploads/payment-proofs';

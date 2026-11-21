@@ -201,7 +201,7 @@ $notificationsCssVersion = file_exists($notificationsCssPath) ? (string)filemtim
                                         <span class="notification-date"><?php echo cvcarts_h($notificationDate); ?></span>
                                     </span>
                                 </span>
-                                <span class="notification-view-hint">View <span aria-hidden="true">›</span></span>
+                                <span class="notification-view-hint">View</span>
                             </button>
                         <?php endforeach; ?>
                     </div>

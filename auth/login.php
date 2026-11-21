@@ -83,6 +83,7 @@ $flashes = cvcarts_get_flash();
         <section class="login-card">
             <div class="card-glow"></div>
             <div class="card-content">
+                <?php require __DIR__ . '/../includes/auth-mobile-logo.php'; ?>
                 <div class="card-header">
                     <p class="welcome-label">WELCOME BACK</p>
                     <h1>Login</h1>
@@ -114,7 +115,6 @@ $flashes = cvcarts_get_flash();
 
                     <button type="submit" class="login-btn">
                         <span>Sign In</span>
-                        <span class="arrow">→</span>
                     </button>
                 </form>
 

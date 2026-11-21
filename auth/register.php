@@ -138,6 +138,7 @@ $flashes = cvcarts_get_flash();
         <section class="auth-card">
             <div class="card-glow"></div>
             <div class="card-content">
+                <?php require __DIR__ . '/../includes/auth-mobile-logo.php'; ?>
                 <div class="card-header">
                     <p class="welcome-label">CREATE YOUR ACCOUNT</p>
                     <h1>Sign Up</h1>
@@ -208,7 +209,6 @@ $flashes = cvcarts_get_flash();
 
                     <button type="submit" class="auth-btn">
                         <span>Create Account</span>
-                        <span class="arrow">→</span>
                     </button>
                 </form>
 

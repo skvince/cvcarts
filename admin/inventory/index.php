@@ -84,9 +84,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (InvalidArgumentException $e) {
             $sizeError = $e->getMessage();
         }
-        $currentProduct = $db->prepare('SELECT image_url FROM products WHERE id = :id LIMIT 1');
+        $currentProduct = $db->prepare('SELECT image_url FROM products WHERE id = :id AND deleted_at IS NULL LIMIT 1');
         $currentProduct->execute(['id' => $productId]);
-        $existingImage = $currentProduct->fetchColumn();
+        $currentProductRow = $currentProduct->fetch(PDO::FETCH_ASSOC);
+        if (!$productId || !$currentProductRow) {
+            cvcarts_flash('error', 'This product is no longer available for editing.');
+            cvcarts_redirect(cvcarts_url('/admin/inventory/index.php'));
+        }
+        $existingImage = $currentProductRow['image_url'];
         $imageUrl = is_string($existingImage) ? $existingImage : '';
         $imageIsValid = true;
         if ($imageFile && is_array($imageFile) && ($imageFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -107,7 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $db->beginTransaction();
             try {
-                $db->prepare('UPDATE products SET name = :name, description = :description, category = :category, price = :price, image_url = :image_url WHERE id = :id')
+                $editLock = $db->prepare('SELECT id FROM products WHERE id = :id AND deleted_at IS NULL FOR UPDATE');
+                $editLock->execute(['id' => $productId]);
+                if ($editLock->fetchColumn() === false) {
+                    throw new RuntimeException('This product is no longer available for editing.');
+                }
+                $db->prepare('UPDATE products SET name = :name, description = :description, category = :category, price = :price, image_url = :image_url WHERE id = :id AND deleted_at IS NULL')
                     ->execute([
                         'name' => $name, 'description' => $description ?: null, 'category' => $category, 'price' => $price,
                         'image_url' => $imageUrl ?: null, 'id' => $productId,
@@ -136,13 +146,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $db->beginTransaction();
         try {
-            $productQuery = $db->prepare('SELECT is_active FROM products WHERE id = :id FOR UPDATE');
+            $productQuery = $db->prepare('SELECT is_active, deleted_at FROM products WHERE id = :id FOR UPDATE');
             $productQuery->execute(['id' => $productId]);
-            $isActive = $productQuery->fetchColumn();
-            if ($isActive === false) {
+            $product = $productQuery->fetch(PDO::FETCH_ASSOC);
+            if (!$product) {
                 throw new RuntimeException('The product could not be found.');
             }
-            if ((int)$isActive === 1) {
+            if ($product['deleted_at'] !== null) {
+                throw new RuntimeException('This product has already been deleted.');
+            }
+            if ((int)$product['is_active'] === 1) {
                 throw new RuntimeException('This product is already active.');
             }
             $db->prepare('UPDATE products SET is_active = 1 WHERE id = :id')->execute(['id' => $productId]);
@@ -172,52 +185,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cvcarts_redirect(cvcarts_url('/admin/inventory/index.php'));
         }
         $db->beginTransaction();
-        $imagePathToRemove = null;
         try {
-            $imageQuery = $db->prepare('SELECT image_url FROM products WHERE id = :id FOR UPDATE');
-            $imageQuery->execute(['id' => $productId]);
-            $imageUrl = $imageQuery->fetchColumn();
-            if ($imageUrl === false) {
+            $productQuery = $db->prepare('SELECT is_active, deleted_at FROM products WHERE id = :id FOR UPDATE');
+            $productQuery->execute(['id' => $productId]);
+            $product = $productQuery->fetch(PDO::FETCH_ASSOC);
+            if (!$product) {
                 throw new RuntimeException('The product could not be found.');
             }
-            $historyQuery = $db->prepare('SELECT COUNT(*) FROM order_items WHERE product_id = :id');
-            $historyQuery->execute(['id' => $productId]);
-            if ((int)$historyQuery->fetchColumn() > 0) {
-                throw new RuntimeException('This product is part of order history and cannot be permanently deleted.');
+            if ($product['deleted_at'] !== null) {
+                throw new RuntimeException('This product has already been deleted.');
             }
-            $cartQuery = $db->prepare('SELECT COUNT(*) FROM cart_items WHERE product_id = :id');
+            $cartQuery = $db->prepare('SELECT id FROM cart_items WHERE product_id = :id LIMIT 1 FOR UPDATE');
             $cartQuery->execute(['id' => $productId]);
-            if ((int)$cartQuery->fetchColumn() > 0) {
-                throw new RuntimeException('This product is in a student cart and cannot be permanently deleted.');
+            $hasCartItems = $cartQuery->fetchColumn() !== false;
+            if ((int)$product['is_active'] !== 1 && !$hasCartItems) {
+                throw new RuntimeException('Only products in the Shop or a student cart can be deleted.');
             }
-            $movementQuery = $db->prepare('SELECT COUNT(*) FROM inventory_movements WHERE product_id = :id');
-            $movementQuery->execute(['id' => $productId]);
-            if ((int)$movementQuery->fetchColumn() > 0) {
-                throw new RuntimeException('This product has inventory movement history and cannot be permanently deleted.');
-            }
-            $delete = $db->prepare('DELETE FROM products WHERE id = :id');
+            $cartDelete = $db->prepare('DELETE FROM cart_items WHERE product_id = :id');
+            $cartDelete->execute(['id' => $productId]);
+            $removedCartItems = $cartDelete->rowCount();
+            $delete = $db->prepare('UPDATE products SET is_active = 0, deleted_at = CURRENT_TIMESTAMP WHERE id = :id AND deleted_at IS NULL');
             $delete->execute(['id' => $productId]);
-            if ($delete->rowCount() === 0) {
+            if ($delete->rowCount() !== 1) {
                 throw new RuntimeException('The product could not be found.');
-            }
-            if (is_string($imageUrl) && preg_match('~^/uploads/products/[A-Za-z0-9]+\.(?:jpg|png|webp)$~', $imageUrl) === 1) {
-                $imagePath = __DIR__ . '/../../' . ltrim($imageUrl, '/');
-                $imagePathToRemove = is_file($imagePath) ? $imagePath : null;
             }
             $db->prepare('INSERT INTO admin_activity (admin_id, action, details) VALUES (:admin_id, :action, :details)')
                 ->execute(['admin_id' => $user['id'], 'action' => 'Product deleted', 'details' => 'Product ID ' . $productId . ' removed from inventory.']);
             cvcarts_emit_realtime_event($db, 'product.updated', 'admin');
             cvcarts_emit_realtime_event($db, 'catalog.updated', 'public');
             $db->commit();
-            if ($imagePathToRemove !== null && !@unlink($imagePathToRemove)) {
-                error_log('CVCarts could not remove deleted product image: ' . $imagePathToRemove);
-            }
-            cvcarts_flash('success', 'Product deleted.');
+            cvcarts_flash('success', $removedCartItems > 0
+                ? 'Product removed from the Shop and active carts. Existing order and inventory history is preserved.'
+                : 'Product removed from the Shop. Existing order and inventory history is preserved.');
         } catch (Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
-            cvcarts_flash('error', $e instanceof RuntimeException ? $e->getMessage() : 'The product could not be deleted.');
+            if ($e instanceof PDOException || !($e instanceof RuntimeException)) {
+                error_log('CVCarts product deletion failed: ' . $e->getMessage());
+                cvcarts_flash('error', 'The product could not be deleted. Please try again.');
+            } else {
+                cvcarts_flash('error', $e->getMessage());
+            }
         }
         cvcarts_redirect(cvcarts_url('/admin/inventory/index.php'));
     }
@@ -244,7 +253,7 @@ $sortOptions = [
 if (!isset($sortOptions[$sort])) {
     $sort = 'name_asc';
 }
-$where = [];
+$where = ['deleted_at IS NULL'];
 $params = [];
 if ($search !== '') {
     $where[] = '(name LIKE :search_name OR category LIKE :search_category OR description LIKE :search_description)';
@@ -269,9 +278,7 @@ $totalPages = max(1, (int)ceil($totalProducts / $pageSize));
 $page = min($page, $totalPages);
 $stmt = $db->prepare(
     'SELECT products.*,
-        (SELECT COUNT(*) FROM order_items oi WHERE oi.product_id = products.id) AS order_item_count,
-        (SELECT COUNT(*) FROM cart_items ci WHERE ci.product_id = products.id) AS cart_item_count,
-        (SELECT COUNT(*) FROM inventory_movements im WHERE im.product_id = products.id) AS inventory_movement_count
+        (SELECT COUNT(*) FROM cart_items ci WHERE ci.product_id = products.id) AS cart_item_count
      FROM products' . $whereSql . ' ORDER BY is_active DESC, ' . $sortOptions[$sort] . ' LIMIT :limit OFFSET :offset'
 );
 foreach ($params as $key => $value) {
@@ -281,7 +288,7 @@ $stmt->bindValue(':limit', $pageSize, PDO::PARAM_INT);
 $stmt->bindValue(':offset', ($page - 1) * $pageSize, PDO::PARAM_INT);
 $stmt->execute();
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$categories = $db->query('SELECT DISTINCT category FROM products WHERE category <> "" ORDER BY category')->fetchAll(PDO::FETCH_COLUMN);
+$categories = $db->query('SELECT DISTINCT category FROM products WHERE deleted_at IS NULL AND category <> "" ORDER BY category')->fetchAll(PDO::FETCH_COLUMN);
 $sizeQuery = $db->query('SELECT product_id, id, size, stock, is_active FROM product_sizes ORDER BY size');
 $productSizes = [];
 foreach ($sizeQuery->fetchAll(PDO::FETCH_ASSOC) as $sizeRow) {
@@ -378,7 +385,7 @@ $flashes = cvcarts_get_flash();
                             <div class="form-field regular-stock-field"><label class="form-label" for="product-stock">Regular stock</label><input class="form-control" id="product-stock" type="number" min="0" name="stock" value="0" required></div>
                             <div class="form-field size-stock-field" hidden><input type="hidden" class="size-stock-input" id="product-sizes" name="sizes"><button class="btn btn-small" type="button" data-modal-open="size-manager-dialog" data-size-manager="product-sizes">Manage Sizes and Stock</button><p class="form-help" data-size-summary="product-sizes">No size inventory configured.</p></div>
                             <div class="form-field"><label class="form-label" for="product-description">Description</label><textarea class="form-control" id="product-description" name="description" rows="3"></textarea></div>
-                            <div class="form-field"><label class="form-label" for="product-image-upload">Upload Image</label><input class="form-control" id="product-image-upload" type="file" name="image_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"></div>
+                            <div class="form-field"><label class="form-label" for="product-image-upload">Upload Image</label><input class="form-control" id="product-image-upload" type="file" name="image_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-image-preview="#product-image-preview" data-image-preview-initially-hidden="true"><img id="product-image-preview" class="inventory-current-thumb" src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="" hidden></div>
                         </div>
                         <footer class="modal-footer"><button class="btn btn-small" type="button" data-modal-close>Cancel</button><button class="btn" type="submit">Save Product</button></footer>
                     </form>
@@ -434,7 +441,7 @@ $flashes = cvcarts_get_flash();
                                                         <div class="form-field"><label class="form-label" for="product-name-<?php echo (int)$product['id']; ?>">Name</label><input class="form-control" id="product-name-<?php echo (int)$product['id']; ?>" name="name" maxlength="150" value="<?php echo cvcarts_h($product['name']); ?>" required></div>
                                                         <div class="form-field"><label class="form-label" for="product-category-<?php echo (int)$product['id']; ?>">Category</label><input class="form-control" id="product-category-<?php echo (int)$product['id']; ?>" name="category" maxlength="100" value="<?php echo cvcarts_h($product['category']); ?>" required></div>
                                                         <div class="form-field"><label class="form-label" for="product-description-<?php echo (int)$product['id']; ?>">Description</label><textarea class="form-control" id="product-description-<?php echo (int)$product['id']; ?>" name="description" rows="3"><?php echo cvcarts_h($product['description'] ?? ''); ?></textarea></div>
-                                                        <div class="form-field"><label class="form-label" for="product-upload-<?php echo (int)$product['id']; ?>">Upload Image</label><input class="form-control" id="product-upload-<?php echo (int)$product['id']; ?>" type="file" name="image_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><img src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="Current <?php echo cvcarts_h($product['name']); ?> image" class="inventory-current-thumb"></div>
+                                                        <div class="form-field"><label class="form-label" for="product-upload-<?php echo (int)$product['id']; ?>">Upload Image</label><input class="form-control" id="product-upload-<?php echo (int)$product['id']; ?>" type="file" name="image_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-image-preview="#product-current-image-<?php echo (int)$product['id']; ?>"><img id="product-current-image-<?php echo (int)$product['id']; ?>" src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="Current <?php echo cvcarts_h($product['name']); ?> image" class="inventory-current-thumb"></div>
                                                         <div class="form-field"><label class="form-label" for="product-price-<?php echo (int)$product['id']; ?>">Price</label><input class="form-control" id="product-price-<?php echo (int)$product['id']; ?>" type="number" min="0" step="0.01" name="price" value="<?php echo cvcarts_h((string)$product['price']); ?>" required></div>
                                                         <?php $sizeSelectorId = 'product-has-sizes-' . (int)$product['id']; ?>
                                                         <div class="form-field"><label class="form-label" for="<?php echo $sizeSelectorId; ?>">Does this product have sizes?</label><select class="form-select product-has-sizes" id="<?php echo $sizeSelectorId; ?>" name="has_sizes" data-original-sized="<?php echo (int)$product['has_sizes']; ?>"><option value="0" <?php echo (int)$product['has_sizes'] !== 1 ? 'selected' : ''; ?>>No</option><option value="1" <?php echo (int)$product['has_sizes'] === 1 ? 'selected' : ''; ?>>Yes</option></select></div>
@@ -501,10 +508,10 @@ $flashes = cvcarts_get_flash();
                                                      <button class="btn btn-small" name="restore_product" value="1" type="submit" data-confirm="Restore <?php echo cvcarts_h($product['name']); ?> to the student shop?">Restore</button>
                                                  </form>
                                              <?php endif; ?>
-                                             <?php if ((int)$product['order_item_count'] === 0 && (int)$product['cart_item_count'] === 0 && (int)$product['inventory_movement_count'] === 0): ?>
+                                             <?php if ((int)$product['is_active'] === 1 || (int)$product['cart_item_count'] > 0): ?>
                                                  <form method="post" action="<?php echo cvcarts_h(cvcarts_url('/admin/inventory/index.php')); ?>">
                                                      <input type="hidden" name="csrf_token" value="<?php echo cvcarts_h(cvcarts_csrf_token()); ?>"><input type="hidden" name="product_id" value="<?php echo (int)$product['id']; ?>">
-                                                     <button class="btn btn-small btn-danger" name="delete_product" value="1" type="submit" data-confirm="Permanently delete <?php echo cvcarts_h($product['name']); ?>? No order, cart, or inventory audit history currently references this product." data-confirm-title="Delete product?" data-confirm-label="Delete Product" data-confirm-type="error">Delete</button>
+                                                     <button class="btn btn-small btn-danger" name="delete_product" value="1" type="submit" data-confirm="Remove this item from the Shop and Cart? Existing orders and inventory history will be preserved.<?php echo (int)$product['cart_item_count'] > 0 ? ' It will be removed from ' . (int)$product['cart_item_count'] . ' active student cart(s).' : ''; ?>" data-confirm-title="Delete product?" data-confirm-label="Delete Product" data-confirm-type="error">Delete</button>
                                                  </form>
                                              <?php endif; ?>
                                          </div>
@@ -560,6 +567,7 @@ $flashes = cvcarts_get_flash();
         </main>
     </div>
 
+    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/image-preview.js?v=' . filemtime(__DIR__ . '/../../assets/js/image-preview.js'))); ?>" defer></script>
     <script>
         window.cvcartsInitInventory = function () {
         const sizeDialog = document.getElementById('size-manager-dialog');

@@ -59,7 +59,8 @@ try {
             has_sizes TINYINT(1) NOT NULL DEFAULT 0,
             image_url VARCHAR(255) DEFAULT NULL,
             is_active TINYINT(1) NOT NULL DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            deleted_at DATETIME DEFAULT NULL
         )",
 
         "CREATE TABLE IF NOT EXISTS cart_items (

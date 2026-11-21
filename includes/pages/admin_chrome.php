@@ -64,11 +64,11 @@ function cvcarts_admin_header(array $user, array $alerts = []): void {
                         <div class="dropdown-empty">You're all caught up. No low-stock or pending-payment alerts.</div>
                     <?php endif; ?>
                     <?php if ((int)$alerts['pending_payments'] > 0): ?>
-                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/order-status/index.php')) ?>">Review payments →</a>
+                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/order-status/index.php')) ?>">Review payments</a>
                     <?php elseif ((int)$alerts['ready'] > 0): ?>
-                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/ready-to-claim/index.php')) ?>">Ready to Claim →</a>
+                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/ready-to-claim/index.php')) ?>">Ready to Claim</a>
                     <?php elseif ((int)$alerts['low_stock_count'] > 0): ?>
-                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/inventory/index.php')) ?>">View inventory →</a>
+                        <a class="dropdown-footer" href="<?= cvcarts_h(cvcarts_url('/admin/inventory/index.php')) ?>">View inventory</a>
                     <?php endif; ?>
                 </div>
             </details>

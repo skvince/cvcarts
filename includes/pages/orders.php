@@ -418,7 +418,7 @@ $flashes = cvcarts_get_flash();
                     <input type="hidden" name="resubmit_payment" value="1">
                     <input type="hidden" name="order_id" value="<?= (int)$detailOrder['id'] ?>">
                     <div class="form-field"><label class="form-label" for="resubmit-reference">Transaction Reference</label><input class="form-control" id="resubmit-reference" name="transaction_reference" maxlength="150" required></div>
-                    <div class="form-field"><label class="form-label" for="resubmit-proof">New Payment Proof</label><input class="form-control" id="resubmit-proof" type="file" name="payment_proof" accept="image/jpeg,image/png,application/pdf" required></div>
+                    <div class="form-field"><label class="form-label" for="resubmit-proof">New Payment Proof</label><input class="form-control" id="resubmit-proof" type="file" name="payment_proof" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf" data-image-preview="#resubmit-proof-preview" data-image-preview-initially-hidden="true" required><img id="resubmit-proof-preview" class="form-image-preview" src="<?= cvcarts_h(cvcarts_url('/assets/images/logo.png')) ?>" alt="" hidden></div>
                     <button class="btn" type="submit">Resubmit for Review</button>
                 </form>
             </section>
@@ -651,6 +651,7 @@ $flashes = cvcarts_get_flash();
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?= cvcarts_h(cvcarts_url('/assets/js/modal.js')) ?>"></script>
+    <script src="<?= cvcarts_h(cvcarts_url('/assets/js/image-preview.js?v=' . filemtime(__DIR__ . '/../../assets/js/image-preview.js'))) ?>" defer></script>
     <?php if ($detailOrder): ?>
     <script>
         function initializeOrderDetailsModal() {

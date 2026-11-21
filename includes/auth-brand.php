@@ -20,7 +20,7 @@
         <div class="brand-slide" data-carousel-slide aria-hidden="true">
             <p class="brand-eyebrow">FAST &amp; SEAMLESS CHECKOUT</p>
             <h2>Skip the Lines,<br><span>Shop Smarter.</span></h2>
-            <p class="brand-description">Browse school supplies, snacks, and daily necessities from anywhere on campus and pick up with zero hassle.</p>
+            <p class="brand-description">Browse school supplies and daily necessities from anywhere on campus and pick up with zero hassle.</p>
         </div>
         <div class="brand-slide" data-carousel-slide aria-hidden="true">
             <p class="brand-eyebrow">SECURE ACCOUNT ACCESS</p>
@@ -35,7 +35,6 @@
         </div>
     </div>
     <div class="brand-bottom">
-        <div class="bottom-line"></div>
         <span>SHOP SMART. LIVE EASY.</span>
     </div>
 </section>

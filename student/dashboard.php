@@ -18,7 +18,7 @@ $stats = [
 $stmt = $db->prepare('SELECT * FROM orders WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 5');
 $stmt->execute(['user_id' => $userId]);
 $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$products = $db->query('SELECT id, name, category, price, stock FROM products WHERE is_active = 1 ORDER BY created_at DESC LIMIT 3')->fetchAll(PDO::FETCH_ASSOC);
+$products = $db->query('SELECT id, name, category, price, stock FROM products WHERE is_active = 1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 3')->fetchAll(PDO::FETCH_ASSOC);
 $flashes = cvcarts_get_flash();
 $statCards = [
     ['label' => 'Total Orders', 'value' => number_format($stats['orders']), 'icon' => 'bi-bag-check', 'tone' => 'neutral'],
@@ -163,7 +163,7 @@ $statCards = [
                                 </tbody>
                             </table>
                         </div>
-                        <a class="student-panel-link" href="<?php echo cvcarts_h(cvcarts_url('/student/order-status/index.php')); ?>">View all orders <span aria-hidden="true">→</span></a>
+                        <a class="student-panel-link" href="<?php echo cvcarts_h(cvcarts_url('/student/order-status/index.php')); ?>">View all orders</a>
                     </section>
                 </div>
             </div>
