@@ -565,7 +565,7 @@ $flashes = cvcarts_get_flash();
                     <?php endif; ?>
                 <?php endif; ?>
                 <?php if ($hasAdminActions): ?>
-                    <td class="order-actions">
+                    <td class="action-cell order-actions">
                         <?php if ($order['latest_payment_status'] === 'Pending Verification' && $order['payment_status'] === 'Pending Verification' && $order['order_status'] === 'Payment Verification' && $order['payment_method'] !== 'Cash'): ?>
                             <?php if ($order['transaction_reference']): ?><small>Ref: <?= cvcarts_h($order['transaction_reference']) ?></small><?php endif; ?>
                             <?php if ($order['proof_path']): ?><a href="<?= cvcarts_h(cvcarts_url('/api/payments/proof.php?order_id=' . (int)$order['id'])) ?>">View proof</a><?php endif; ?>

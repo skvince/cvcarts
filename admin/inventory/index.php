@@ -408,7 +408,7 @@ $flashes = cvcarts_get_flash();
                             <col class="inventory-col-status">
                             <col class="inventory-col-actions">
                         </colgroup>
-                        <thead><tr><th scope="col">Item / details</th><th scope="col">Category</th><th scope="col">Price</th><th scope="col">Stock</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+                        <thead><tr><th scope="col">Item / details</th><th scope="col">Category</th><th scope="col">Price</th><th scope="col">Stock</th><th scope="col">Status</th><th scope="col" class="action-cell">Actions</th></tr></thead>
                         <tbody>
                             <?php if (!$products): ?><tr class="inventory-empty-row"><td colspan="6">No inventory items found. Adjust your filters or add a new product.</td></tr><?php endif; ?>
                             <?php foreach ($products as $product): ?>
@@ -502,7 +502,7 @@ $flashes = cvcarts_get_flash();
                                         <?php endif; ?>
                                     </td>
                                      <td><?php echo (int)$product['is_active'] !== 1 ? cvcarts_status_badge('Archived') : cvcarts_status_badge((int)$product['stock'] < 10 ? 'Low Stock' : 'In Stock'); ?></td>
-                                    <td>
+                                    <td class="action-cell">
                                         <div class="inventory-row-actions">
                                              <button class="btn btn-small btn-secondary" type="button" data-modal-open="view-product-<?php echo (int)$product['id']; ?>">View Details</button>
                                              <button class="btn btn-small btn-secondary" type="button" data-modal-open="edit-product-<?php echo (int)$product['id']; ?>">Edit</button>
@@ -564,7 +564,7 @@ $flashes = cvcarts_get_flash();
                         <div><button class="btn btn-small" id="add-custom-size" type="button">Add Custom Size</button></div>
                     </div>
                     <div id="size-manager-error" class="flash-message error" role="alert" hidden></div>
-                    <div class="table-wrapper"><table><thead><tr><th>Size</th><th>Quantity</th><th>Action</th></tr></thead><tbody id="size-config-rows"></tbody></table></div>
+                    <div class="table-wrapper"><table><thead><tr><th>Size</th><th>Quantity</th><th class="action-cell">Action</th></tr></thead><tbody id="size-config-rows"></tbody></table></div>
                     <footer class="modal-footer"><button class="btn btn-small btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn" id="save-size-config" type="button" data-modal-close>Apply Sizes</button></footer>
                 </div>
             </dialog>
@@ -620,6 +620,7 @@ $flashes = cvcarts_get_flash();
             stockCell.appendChild(stockInput);
 
             const actionCell = document.createElement('td');
+            actionCell.className = 'action-cell';
             const removeButton = document.createElement('button');
             removeButton.className = 'btn btn-small';
             removeButton.type = 'button';

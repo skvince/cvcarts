@@ -582,7 +582,6 @@ tbody tr:hover {
     font-size: var(--fs-small);
     font-weight: var(--fw-bold);
     line-height: 1.25;
-    text-align: left;
     vertical-align: middle;
     white-space: nowrap;
 }
@@ -663,6 +662,19 @@ tbody tr:hover {
 
 .action-cell {
     text-align: right;
+}
+
+.app-layout:has(.sidebar a[href*="/admin/"]) .main-content .action-cell,
+.app-layout:has(.sidebar a[href*="/admin/"]) .main-content .order-actions {
+    text-align: center;
+}
+
+.app-layout:has(.sidebar a[href*="/admin/"]) .main-content .order-actions form:not(.order-status-form) {
+    justify-items: center;
+}
+
+.app-layout:has(.sidebar a[href*="/admin/"]) .main-content .order-actions .order-status-buttons {
+    justify-content: center;
 }
 
 .status {
@@ -1080,6 +1092,13 @@ tbody tr:hover {
 
 .filter-actions .btn-secondary:hover {
     transform: translateY(-1px);
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+    [data-filter-form] :is(input:not([type="hidden"]), select, button[type="submit"], [data-filter-reset]) {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
 }
 
 .filter-form[aria-busy="true"],

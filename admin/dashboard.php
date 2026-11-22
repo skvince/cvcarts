@@ -449,20 +449,6 @@ $statCards = [
         'tone' => 'amber',
     ],
     [
-        'label' => 'Verified Payments',
-        'value' => number_format($stats['verified']),
-        'scope' => '',
-        'icon' => 'bi-check-circle',
-        'tone' => 'emerald',
-    ],
-    [
-        'label' => 'Total Revenue (₱)',
-        'value' => cvcarts_format_money($stats['revenue']),
-        'scope' => '',
-        'icon' => 'bi-currency-exchange',
-        'tone' => 'emerald',
-    ],
-    [
         'label' => 'Ready to Claim',
         'value' => number_format($stats['ready']),
         'scope' => '',
@@ -851,7 +837,7 @@ $statCards = [
                                     <th scope="col">Student</th>
                                     <th scope="col">Item</th>
                                     <th scope="col">Status</th>
-                                    <th scope="col"><span class="visually-hidden">Action</span></th>
+                                    <th scope="col" class="action-cell"><span class="visually-hidden">Action</span></th>
                                 </tr>
                             </thead>
                             <tbody>

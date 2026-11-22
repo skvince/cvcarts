@@ -149,7 +149,7 @@ $flashes = cvcarts_get_flash();
                     </div>
                 </form>
                 <div class="table-wrapper"><table class="users-table">
-                    <thead><tr><th>Student</th><th>Email</th><th>Verification</th><th>Account</th><th>Orders</th><th>Last login</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Student</th><th>Email</th><th>Verification</th><th>Account</th><th>Orders</th><th>Last login</th><th class="action-cell">Action</th></tr></thead>
                     <tbody>
                     <?php if (!$students): ?><tr><td colspan="7">No student accounts found.</td></tr><?php endif; ?>
                     <?php foreach ($students as $student): ?>
@@ -165,7 +165,7 @@ $flashes = cvcarts_get_flash();
                             <td><?= cvcarts_status_badge(ucwords(str_replace('_', ' ', (string)$student['account_status']))) ?></td>
                             <td class="numeric-cell"><?= (int)$student['order_count'] ?></td>
                             <td><?= $student['last_login_at'] ? cvcarts_h(date('M j, Y g:i A', strtotime($student['last_login_at']))) : '—' ?></td>
-                            <td>
+                            <td class="action-cell">
                                 <button class="btn btn-small btn-secondary" type="button" data-modal-open="student-details-<?= (int)$student['id'] ?>">View Details</button>
                                 <dialog id="student-details-<?= (int)$student['id'] ?>" class="app-modal" aria-labelledby="student-details-title-<?= (int)$student['id'] ?>">
                                     <div class="modal-shell">
@@ -192,7 +192,7 @@ $flashes = cvcarts_get_flash();
                                         <?php if ((int)$student['is_active'] === 1): ?><button class="btn btn-small btn-danger" name="account_action" value="suspend" type="submit" data-confirm="Suspend <?= cvcarts_h($studentName) ?>? The student will no longer be able to sign in." data-confirm-title="Suspend student?" data-confirm-label="Suspend Account" data-confirm-type="error">Suspend</button>
                                         <?php else: ?><button class="btn btn-small" name="account_action" value="activate" type="submit" data-confirm="Activate <?= cvcarts_h($studentName) ?>?">Activate</button><?php endif; ?>
                                     </form>
-                                <?php else: ?>Email verification required<?php endif; ?>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
