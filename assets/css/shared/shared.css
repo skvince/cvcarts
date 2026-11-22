@@ -1540,15 +1540,6 @@ dialog.app-modal.is-closing::backdrop {
         text-overflow: ellipsis;
     }
 
-    .sync-connection {
-        width: 32px;
-        height: 32px;
-        justify-content: center;
-        padding: 0;
-        overflow: hidden;
-        font-size: 0;
-    }
-
     .app-layout {
         display: block;
     }
@@ -1799,50 +1790,6 @@ dialog.app-modal.is-closing::backdrop {
     display: none;
 }
 
-.sync-connection {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 11px;
-    border: 1px solid #d5ead9;
-    border-radius: 999px;
-    background: #f1f9f3;
-    color: #4c6b58;
-    font-size: var(--fs-caption);
-    font-weight: var(--fw-semibold);
-    white-space: nowrap;
-}
-
-.sync-connection::before {
-    width: 9px;
-    height: 9px;
-    flex: 0 0 9px;
-    border-radius: 50%;
-    background: #d29a28;
-    content: "";
-}
-
-.sync-connection-connected {
-    border-color: #c8e6d0;
-    background: #edf8f0;
-    color: #12663a;
-}
-
-.sync-connection-connected::before {
-    background: #168653;
-    box-shadow: 0 0 0 3px rgba(22, 134, 83, .12);
-}
-
-.sync-connection-offline {
-    border-color: #efd1d1;
-    background: #fff5f5;
-    color: #a52e2e;
-}
-
-.sync-connection-offline::before {
-    background: #c0392b;
-}
-
 .nav-sync-badge {
     min-width: 18px;
     margin-left: auto;
@@ -2002,16 +1949,6 @@ dialog.app-modal.is-closing::backdrop {
         gap: 5px;
     }
 
-    .sync-connection {
-        width: 32px;
-        height: 32px;
-        flex: 0 0 32px;
-        justify-content: center;
-        padding: 0;
-        overflow: hidden;
-        font-size: 0;
-    }
-
     .header-actions .header-menu.profile-menu {
         display: block;
     }
@@ -2088,12 +2025,6 @@ dialog.app-modal.is-closing::backdrop {
 
     .header-actions {
         gap: 2px;
-    }
-
-    .sync-connection {
-        width: 28px;
-        height: 28px;
-        flex-basis: 28px;
     }
 
     .header-icon {

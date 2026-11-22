@@ -136,13 +136,6 @@
 
         const appBase = appScript.src.replace(/\/assets\/js\/modal\.js(?:\?.*)?$/, '');
         const stream = new EventSource(appBase + '/api/realtime/stream.php');
-        const status = document.createElement('span');
-        status.className = 'sync-connection sync-connection-reconnecting';
-        status.setAttribute('role', 'status');
-        status.setAttribute('aria-live', 'polite');
-        status.textContent = 'Reconnecting';
-        const actions = header.querySelector('.header-actions');
-        if (actions) actions.insertBefore(status, actions.firstChild);
 
         const adminPage = sidebar.querySelector('a[href*="/admin/"]') !== null;
         const notificationLink = adminPage
@@ -174,11 +167,6 @@
             '/student/receipt.php',
             '/admin/sales/index.php'
         ];
-
-        function setConnectionState(stateText, stateClass) {
-            status.textContent = stateText;
-            status.className = 'sync-connection sync-connection-' + stateClass;
-        }
 
         function updateBadge(count) {
             if (!notificationLink) return;
@@ -305,11 +293,7 @@
                     }
                 }
             }).catch(function () {
-                if (!navigator.onLine) {
-                    setConnectionState('Offline', 'offline');
-                } else {
-                    console.error('CVCarts could not refresh the synchronized header counters.');
-                }
+                console.error('CVCarts could not refresh the synchronized header counters.');
             });
         }
 
@@ -356,11 +340,7 @@
                 });
                 document.dispatchEvent(new CustomEvent('cvcarts:content-updated'));
             }).catch(function () {
-                if (!navigator.onLine) {
-                    setConnectionState('Offline', 'offline');
-                } else {
-                    console.error('CVCarts could not refresh the current page content.');
-                }
+                console.error('CVCarts could not refresh the current page content.');
             });
         }
 
@@ -381,15 +361,8 @@
             }
         });
 
-        stream.onopen = function () {
-            setConnectionState('Connected', 'connected');
-        };
-        stream.onerror = function () {
-            setConnectionState(navigator.onLine ? 'Reconnecting' : 'Offline', navigator.onLine ? 'reconnecting' : 'offline');
-        };
         stream.addEventListener('auth.expired', function () {
             stream.close();
-            setConnectionState('Session expired', 'offline');
         });
         stream.addEventListener('cvcarts', function (event) {
             const eventId = Number(event.lastEventId || 0);
@@ -406,12 +379,6 @@
             refreshCounters();
             window.clearTimeout(refreshTimer);
             refreshTimer = window.setTimeout(refreshMainContent, 300);
-        });
-        window.addEventListener('offline', function () {
-            setConnectionState('Offline', 'offline');
-        });
-        window.addEventListener('online', function () {
-            setConnectionState('Reconnecting', 'reconnecting');
         });
         refreshCounters();
     }
