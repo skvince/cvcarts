@@ -124,13 +124,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (string)($_POST['rejection_reason'] ?? '')
         );
     } elseif (isset($_POST['new_status'])) {
-        $result = cvcarts_admin_update_order_status(
-            $db,
-            $orderId,
-            (int)$currentUser['id'],
-            (string)$_POST['new_status'],
-            (string)($_POST['status_reason'] ?? '')
-        );
+        try {
+            $result = cvcarts_admin_update_order_status(
+                $db,
+                $orderId,
+                (int)$currentUser['id'],
+                (string)$_POST['new_status'],
+                (string)($_POST['status_reason'] ?? '')
+            );
+        } catch (Throwable $e) {
+            error_log('CVCarts admin order status update failed for order ' . $orderId . ': ' . $e->getMessage());
+            cvcarts_flash('error', 'The order could not be updated. The cancellation did not complete; please contact support.');
+            cvcarts_redirect(cvcarts_url($route));
+        }
     } else {
         $result = ['success' => false, 'message' => 'No valid order action was selected.'];
     }
@@ -578,7 +584,7 @@ $flashes = cvcarts_get_flash();
                                             <input type="hidden" name="csrf_token" value="<?= cvcarts_h(cvcarts_csrf_token()) ?>"><input type="hidden" name="order_id" value="<?= (int)$order['id'] ?>"><input type="hidden" name="return_view" value="0"><input type="hidden" name="payment_decision" value="reject">
                                             <div class="form-field"><label class="form-label" for="rejection-reason-<?= (int)$order['id'] ?>">Rejection reason</label><textarea class="form-control" id="rejection-reason-<?= (int)$order['id'] ?>" name="rejection_reason" maxlength="500" rows="4" required></textarea></div>
                                         </div>
-                                        <footer class="modal-footer"><button class="btn btn-small btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-small btn-danger" type="submit" data-confirm="Reject payment for order <?= cvcarts_h($order['reference_number']) ?> and send this reason to the student?" data-confirm-title="Reject payment?" data-confirm-type="error">Reject Payment</button></footer>
+                                        <footer class="modal-footer"><button class="btn btn-small btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-small btn-danger" type="submit">Reject Payment</button></footer>
                                     </form>
                                 </div>
                             </dialog>
@@ -594,7 +600,7 @@ $flashes = cvcarts_get_flash();
                                 <input class="form-control" name="status_reason" maxlength="500" placeholder="<?= in_array('Cancelled', $transitions, true) ? 'Cancellation reason' : 'Optional note' ?>" <?= in_array('Cancelled', $transitions, true) ? 'required' : '' ?>>
                                 <div class="order-status-buttons">
                                     <?php foreach ($transitions as $transition): ?>
-                                        <?php $label = $transition === 'Cancelled' ? ($order['payment_status'] === 'Rejected' ? 'Cancel Rejected Order' : 'Cancel Order') : $transition; ?>
+                                        <?php $label = $transition === 'Cancelled' ? 'Cancel Order' : $transition; ?>
                                         <?php $confirmText = $transition === 'Cancelled'
                                             ? 'Cancel order ' . $order['reference_number'] . '? Ordered stock will be restored to inventory.'
                                             : $label . ' for order ' . $order['reference_number'] . '?'; ?>

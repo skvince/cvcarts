@@ -346,6 +346,8 @@ CREATE TABLE `orders` (
 
   `cancelled_at` datetime DEFAULT NULL,
 
+  `cancellation_reason` varchar(500) DEFAULT NULL,
+
   PRIMARY KEY (`id`),
 
   UNIQUE KEY `reference_number` (`reference_number`),
