@@ -662,7 +662,7 @@ $flashes = cvcarts_get_flash();
         </main>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= cvcarts_h(cvcarts_url('/assets/js/modal.js')) ?>"></script>
+    <script src="<?= cvcarts_h(cvcarts_url('/assets/js/modal.js?v=' . filemtime(__DIR__ . '/../../assets/js/modal.js'))) ?>"></script>
     <script src="<?= cvcarts_h(cvcarts_url('/assets/js/image-preview.js?v=' . filemtime(__DIR__ . '/../../assets/js/image-preview.js'))) ?>" defer></script>
     <?php if ($detailOrder): ?>
     <script>

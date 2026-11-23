@@ -1,8 +1,15 @@
 <?php
 require __DIR__ . '/../includes/auth.php';
 
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    cvcarts_require_csrf();
+    if (!cvcarts_csrf_is_valid()) {
+        cvcarts_flash('error', 'Your sign-in form expired. Please try again.');
+        cvcarts_redirect(cvcarts_url('/auth/login.php'));
+    }
     $identifierInput = $_POST['identifier'] ?? '';
     $passwordInput = $_POST['password'] ?? '';
     $identifier = is_string($identifierInput) ? strtolower(trim($identifierInput)) : '';

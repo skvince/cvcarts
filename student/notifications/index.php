@@ -229,7 +229,7 @@ $notificationsCssVersion = file_exists($notificationsCssPath) ? (string)filemtim
             </div>
         </main>
     </div>
-    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/modal.js')); ?>"></script>
+    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/modal.js?v=' . filemtime(__DIR__ . '/../../assets/js/modal.js'))); ?>"></script>
     <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/student/notifications.js')); ?>"></script>
 </body>
 </html>

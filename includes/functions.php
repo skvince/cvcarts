@@ -137,11 +137,17 @@ function cvcarts_csrf_token(): string {
 }
 
 function cvcarts_require_csrf(): void {
-    $submitted = $_POST['csrf_token'] ?? '';
-    if (!is_string($submitted) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $submitted)) {
+    if (!cvcarts_csrf_is_valid()) {
         http_response_code(419);
         exit('The form expired. Please reload the page and try again.');
     }
+}
+
+function cvcarts_csrf_is_valid(): bool {
+    $submitted = $_POST['csrf_token'] ?? '';
+    return is_string($submitted)
+        && !empty($_SESSION['csrf_token'])
+        && hash_equals($_SESSION['csrf_token'], $submitted);
 }
 
 function cvcarts_normalize_answer(string $answer): string {

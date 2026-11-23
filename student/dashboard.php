@@ -159,6 +159,6 @@ $statCards = [
             </div>
         </main>
     </div>
-    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/modal.js')); ?>"></script>
+    <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/modal.js?v=' . filemtime(__DIR__ . '/../assets/js/modal.js'))); ?>"></script>
 </body>
 </html>

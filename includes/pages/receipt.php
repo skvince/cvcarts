@@ -168,6 +168,6 @@ $flashes = cvcarts_get_flash();
         renderClaimQrCode();
         document.addEventListener('cvcarts:content-updated', renderClaimQrCode);
     </script>
-    <script src="<?= cvcarts_h(cvcarts_url('/assets/js/modal.js')) ?>"></script>
+    <script src="<?= cvcarts_h(cvcarts_url('/assets/js/modal.js?v=' . filemtime(__DIR__ . '/../../assets/js/modal.js'))) ?>"></script>
 </body>
 </html>
