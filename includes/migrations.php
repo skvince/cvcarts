@@ -598,6 +598,42 @@ function cvcarts_migrate_realtime_events(PDO $db): void {
         ->execute(['migration_key' => $migrationKey]);
 }
 
+function cvcarts_migrate_student_verification_cleanup(PDO $db): void {
+    $migrationKey = 'student_verification_cleanup_20261123_v1';
+    $db->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
+        migration_key VARCHAR(80) PRIMARY KEY,
+        applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB");
+    $check = $db->prepare('SELECT 1 FROM schema_migrations WHERE migration_key = :migration_key');
+    $check->execute(['migration_key' => $migrationKey]);
+    if ($check->fetchColumn()) {
+        return;
+    }
+
+    $lockName = 'cvcarts_' . $migrationKey;
+    $lock = $db->prepare('SELECT GET_LOCK(:lock_name, 10)');
+    $lock->execute(['lock_name' => $lockName]);
+    if ((int)$lock->fetchColumn() !== 1) {
+        throw new RuntimeException('Could not acquire the student verification cleanup migration lock.');
+    }
+
+    try {
+        $check->execute(['migration_key' => $migrationKey]);
+        if ($check->fetchColumn()) {
+            return;
+        }
+
+        if (!cvcarts_index_exists($db, 'users', 'users_pending_verification_cleanup_idx')) {
+            $db->exec('CREATE INDEX users_pending_verification_cleanup_idx ON users (role, account_status, is_verified, created_at)');
+        }
+        $db->prepare('INSERT IGNORE INTO schema_migrations (migration_key) VALUES (:migration_key)')
+            ->execute(['migration_key' => $migrationKey]);
+    } finally {
+        $release = $db->prepare('SELECT RELEASE_LOCK(:lock_name)');
+        $release->execute(['lock_name' => $lockName]);
+    }
+}
+
 function cvcarts_migrate(PDO $db): void {
     $migrationKeys = [
         'auth_security_20261115_v2',
@@ -609,6 +645,7 @@ function cvcarts_migrate(PDO $db): void {
         'student_profile_images_20261117_v1',
         'product_barcode_20261121_v1',
         'realtime_events_20261120_v1',
+        'student_verification_cleanup_20261123_v1',
         'product_soft_deletion_20261121_v1',
         'order_cancellation_reason_20261122_v1',
     ];
@@ -629,6 +666,7 @@ function cvcarts_migrate(PDO $db): void {
     cvcarts_migrate_auth_security($db);
     cvcarts_migrate_disable_legacy_admin($db);
     cvcarts_migrate_realtime_events($db);
+    cvcarts_migrate_student_verification_cleanup($db);
     cvcarts_migrate_ecommerce_workflows($db);
     cvcarts_migrate_order_claim_qr($db);
     cvcarts_migrate_order_verification_dates($db);

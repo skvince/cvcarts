@@ -2,6 +2,9 @@
 require __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/mailer.php';
 
+$db = cvcarts_db();
+cvcarts_cleanup_expired_student_registrations($db);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     cvcarts_require_csrf();
     $firstName = trim($_POST['first_name'] ?? '');
@@ -42,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cvcarts_redirect(cvcarts_url('/auth/register.php'));
     }
 
-    $db = cvcarts_db();
     $stmt = $db->prepare('SELECT id, role, account_status FROM users WHERE email = :email LIMIT 1');
     $stmt->execute(['email' => $email]);
     $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -60,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $answerHash = password_hash(cvcarts_normalize_answer($securityAnswer), PASSWORD_DEFAULT);
     $db->beginTransaction();
     try {
-        $insert = $db->prepare("INSERT INTO users (first_name, middle_name, last_name, email, password_hash, security_question, security_answer_hash, role, is_verified, is_active, account_status, registration_status) VALUES (:first_name, :middle_name, :last_name, :email, :password_hash, :security_question, :security_answer_hash, 'student', 0, 0, 'pending_verification', 'pending')");
+        $insert = $db->prepare("INSERT INTO users (first_name, middle_name, last_name, email, password_hash, security_question, security_answer_hash, role, is_verified, is_active, account_status, registration_status, created_at) VALUES (:first_name, :middle_name, :last_name, :email, :password_hash, :security_question, :security_answer_hash, 'student', 0, 0, 'pending_verification', 'pending', NOW())");
         $insert->execute([
             'first_name' => $firstName,
             'middle_name' => $middleName !== '' ? $middleName : null,
@@ -72,8 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         $userId = (int)$db->lastInsertId();
         $rawToken = bin2hex(random_bytes(32));
-        $db->prepare('INSERT INTO account_tokens (user_id, token_type, token_hash, expires_at) VALUES (:user_id, :token_type, :token_hash, DATE_ADD(NOW(), INTERVAL 15 MINUTE))')
-            ->execute(['user_id' => $userId, 'token_type' => 'student_verification', 'token_hash' => hash('sha256', $rawToken)]);
+        $db->prepare("INSERT INTO account_tokens (user_id, token_type, token_hash, expires_at)
+            SELECT id, :token_type, :token_hash, DATE_ADD(created_at, INTERVAL 15 MINUTE)
+            FROM users WHERE id = :user_id")
+            ->execute(['token_type' => 'student_verification', 'token_hash' => hash('sha256', $rawToken), 'user_id' => $userId]);
         cvcarts_emit_realtime_event($db, 'users.updated', 'admin');
         $db->commit();
     } catch (PDOException $e) {
@@ -174,15 +178,16 @@ $flashes = cvcarts_get_flash();
                     <div class="input-group">
                         <label for="password">Password</label>
                         <div class="password-field">
-                            <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
+                            <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" minlength="8" required>
                             <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" data-password-toggle="password">Show</button>
                         </div>
+                        <small class="password-hint">Use at least 8 characters.</small>
                     </div>
 
                     <div class="input-group">
                         <label for="confirm-password">Confirm Password</label>
                         <div class="password-field">
-                            <input type="password" id="confirm-password" name="confirm_password" placeholder="Re-enter your password" autocomplete="new-password" required>
+                            <input type="password" id="confirm-password" name="confirm_password" placeholder="Re-enter your password" autocomplete="new-password" minlength="8" required>
                             <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" data-password-toggle="confirm-password">Show</button>
                         </div>
                     </div>

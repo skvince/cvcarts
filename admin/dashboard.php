@@ -5,6 +5,7 @@ require __DIR__ . '/../includes/pages/admin_chrome.php';
 cvcarts_require_login('admin');
 
 $db = cvcarts_db();
+cvcarts_cleanup_expired_student_registrations($db);
 $user = cvcarts_user();
 
 $alerts = cvcarts_admin_alerts($db);
@@ -97,7 +98,11 @@ $monthlyOrderStats = $statsQuery->fetch(PDO::FETCH_ASSOC) ?: [];
 
 $stats = [
     'students' => (int)$db->query(
-        "SELECT COUNT(*) FROM users WHERE role = 'student'"
+        "SELECT COUNT(*) FROM users
+         WHERE role = 'student'
+           AND is_verified = 1
+           AND email_verified_at IS NOT NULL
+           AND registration_status = 'completed'"
     )->fetchColumn(),
 
     'products' => (int)$db->query(

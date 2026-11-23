@@ -18,6 +18,8 @@ This guide documents the PHP/MySQL application that is currently in this project
 
 This application does **not** integrate a payment gateway. Online payments are submitted with a reference and proof for Admin review; cash is marked paid by Admin after collection. The code creates an order and payment records in the local database.
 
+Para sa paliwanag ng Admin at Student workflow, tingnan ang [CVCarts System Flow](SYSTEM_FLOW.md).
+
 ## 2. Local setup and safe maintenance
 
 1. Install XAMPP with PHP 8.0 or newer, MySQL, and PDO MySQL. The application uses PHP 8 features such as `str_ends_with()` and `match`.

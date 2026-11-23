@@ -155,7 +155,9 @@ CREATE TABLE `users` (
 
   UNIQUE KEY `email` (`email`),
 
-  UNIQUE KEY `users_username_unique` (`username`)
+  UNIQUE KEY `users_username_unique` (`username`),
+
+  KEY `users_pending_verification_cleanup_idx` (`role`,`account_status`,`is_verified`,`created_at`)
 
 ) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE `account_tokens` (

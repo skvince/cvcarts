@@ -26,8 +26,139 @@ body {
     margin-bottom: 12px;
 }
 
+.verification-pending-page .auth-container {
+    width: min(100%, 560px);
+    max-width: 560px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+}
+
+.verification-pending-page .auth-card {
+    max-width: 560px;
+}
+
+.verification-pending-page .mobile-auth-logo {
+    display: flex;
+    justify-content: center;
+    width: min(100%, 300px);
+    margin: 0 auto 20px;
+}
+
+.verification-pending-page .mobile-auth-logo .brand-logo {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    margin: 0;
+    object-fit: contain;
+    filter: brightness(1.35) saturate(1.12) drop-shadow(0 12px 26px rgba(4, 28, 16, .22));
+}
+
 label:has(+ :required, + * :required)::after,
 label:has(> :is(input, select, textarea)[required]):not(:has(input[type="checkbox"]))::after {
     content: " *";
     color: #ff6b6b;
+}
+
+@media (max-width: 860px) {
+    body {
+        align-items: flex-start;
+        padding: 24px 20px;
+    }
+
+    .auth-container {
+        width: 100%;
+        max-width: 560px;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+        margin: 0 auto;
+    }
+
+    .brand-section {
+        align-items: center;
+        padding: 8px 0;
+        text-align: center;
+    }
+
+    .brand-top {
+        justify-content: center;
+        margin-bottom: 14px;
+    }
+
+    .brand-logo {
+        max-width: 280px;
+        margin-bottom: 14px;
+    }
+
+    .brand-content h2 {
+        margin-bottom: 12px;
+        font-size: clamp(28px, 6vw, 38px);
+        line-height: 1.2;
+    }
+
+    .brand-description {
+        max-width: 42ch;
+        margin: 0 auto;
+        font-size: 14px;
+    }
+
+    .brand-bottom {
+        justify-content: center;
+        margin-top: 16px;
+    }
+
+    .auth-card {
+        max-width: 560px;
+    }
+
+    .verification-pending-page .mobile-auth-logo {
+        width: min(100%, 320px);
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 16px 12px 24px;
+    }
+
+    .auth-container {
+        gap: 16px;
+    }
+
+    .brand-top {
+        font-size: 9px;
+        letter-spacing: 2px;
+    }
+
+    .brand-logo {
+        max-width: 200px;
+        margin-bottom: 10px;
+    }
+
+    .brand-content h2 {
+        font-size: clamp(25px, 8vw, 32px);
+    }
+
+    .brand-description {
+        font-size: 13px;
+    }
+
+    .brand-bottom {
+        margin-top: 12px;
+    }
+
+    .auth-card {
+        border-radius: 18px;
+    }
+
+    .card-content {
+        padding: 24px 18px;
+    }
+}
+
+@media (max-width: 520px) {
+    .verification-pending-page .mobile-auth-logo {
+        width: min(100%, 230px);
+        margin-bottom: 12px;
+    }
 }

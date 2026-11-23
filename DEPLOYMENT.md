@@ -27,7 +27,11 @@ Do not use the example values or local XAMPP credentials on the hosted site. A p
 6. The application applies outstanding versioned migrations on the first request after connecting. They are guarded by migration records; a fully migrated database is not altered on each request. Take a backup before first launch.
 7. `database/setup.php` and `database/init_admin.php` are command-line-only utilities. Do not remove that guard or make them web-accessible. Sign in with an existing migrated administrator. If there is no active administrator and the host has no CLI, provision one through a trusted, secure database-administration process using a `password_hash()` result; never insert or share a plaintext password.
 
-## 4. Upload files
+## 4. Expired student registration cleanup
+
+Unverified student registrations and their verification tokens are deleted after the 15-minute verification period. Requests to registration, verification, login, the Admin dashboard, and Admin student pages also run a bounded cleanup as a fallback. If the host supports scheduled CLI tasks, run `php /path/to/application/database/cleanup_expired_registrations.php` every minute using the same environment configuration as the web application. The script is CLI-only; do not make it web-accessible. If the host does not provide cron or scheduled tasks, the request-triggered cleanup remains enabled.
+
+## 5. Upload files
 
 Upload the application contents (not an extra enclosing project folder) into the domain's document root, typically `htdocs/`. Include `vendor/`; do not upload `.git/`, private migration exports, or local backups. Upload the configured `.env` only to the project root, and verify hidden `.htaccess` files are included.
 
@@ -35,7 +39,7 @@ Git intentionally excludes everything under `uploads/`, so the database export d
 
 Use the hosting panel's normal permissions. Do not set directories to world-writable (`777`). The `uploads/` directory must be writable by PHP for image and payment-proof uploads. Keep the repository versions of `uploads/.htaccess` and `uploads/products/.htaccess`: they prevent directory listing and deny script extensions. Avoid adding `Options -ExecCGI` to nested upload `.htaccess` files because shared hosts may reject it with HTTP 500 responses.
 
-## 5. Production verification
+## 6. Production verification
 
 1. Open the HTTPS domain and confirm HTTP redirects to HTTPS.
 2. Confirm direct requests to `.env`, `composer.json`, `.sql` files, `config/`, `includes/`, `database/`, and `vendor/` are denied.

@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $db = cvcarts_db();
+    cvcarts_cleanup_expired_student_registrations($db);
     $stmt = $db->prepare("SELECT * FROM users WHERE (role = 'student' AND email = :student_email) OR (role = 'admin' AND (username = :admin_username OR email = :admin_email)) LIMIT 1");
     $stmt->execute([
         'student_email' => $identifier,

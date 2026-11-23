@@ -226,15 +226,92 @@ function cvcarts_issue_token(int $userId, string $type, int $lifetimeSeconds): s
 function cvcarts_store_token(int $userId, string $type, string $rawToken, int $lifetimeSeconds): void {
     $db = cvcarts_db();
     $tokenHash = hash('sha256', $rawToken);
-    $db->beginTransaction();
+    $ownsTransaction = !$db->inTransaction();
+    if ($ownsTransaction) {
+        $db->beginTransaction();
+    }
     try {
         $db->prepare('UPDATE account_tokens SET used_at = COALESCE(used_at, NOW()) WHERE user_id = :user_id AND token_type = :token_type AND used_at IS NULL')
             ->execute(['user_id' => $userId, 'token_type' => $type]);
         $db->prepare('INSERT INTO account_tokens (user_id, token_type, token_hash, expires_at) VALUES (:user_id, :token_type, :token_hash, DATE_ADD(NOW(), INTERVAL :lifetime SECOND))')
             ->execute(['user_id' => $userId, 'token_type' => $type, 'token_hash' => $tokenHash, 'lifetime' => $lifetimeSeconds]);
-        $db->commit();
+        if ($ownsTransaction) {
+            $db->commit();
+        }
     } catch (Throwable $e) {
-        $db->rollBack();
+        if ($ownsTransaction && $db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+}
+
+function cvcarts_cleanup_expired_student_registrations(PDO $db): int {
+    static $completed = false;
+    if ($completed) {
+        return 0;
+    }
+
+    $db->beginTransaction();
+    try {
+        $expiredStudents = $db->query(
+            "SELECT id
+             FROM users
+             WHERE role = 'student'
+               AND is_verified = 0
+               AND email_verified_at IS NULL
+               AND is_active = 0
+               AND account_status = 'pending_verification'
+               AND registration_status = 'pending'
+               AND created_at <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+             ORDER BY created_at ASC, id ASC
+             LIMIT 100
+             FOR UPDATE"
+        )->fetchAll(PDO::FETCH_COLUMN);
+
+        $activeToken = $db->prepare(
+            "SELECT id
+             FROM account_tokens
+             WHERE user_id = :user_id
+               AND token_type = 'student_verification'
+               AND used_at IS NULL
+               AND expires_at > NOW()
+             LIMIT 1
+             FOR UPDATE"
+        );
+        $deleteStudent = $db->prepare(
+            "DELETE FROM users
+             WHERE id = :id
+               AND role = 'student'
+               AND is_verified = 0
+               AND email_verified_at IS NULL
+               AND is_active = 0
+               AND account_status = 'pending_verification'
+               AND registration_status = 'pending'
+               AND created_at <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)"
+        );
+
+        $deleted = 0;
+        foreach ($expiredStudents as $studentId) {
+            $activeToken->execute(['user_id' => $studentId]);
+            if ($activeToken->fetchColumn()) {
+                continue;
+            }
+
+            $deleteStudent->execute(['id' => $studentId]);
+            $deleted += $deleteStudent->rowCount();
+        }
+
+        if ($deleted > 0) {
+            cvcarts_emit_realtime_event($db, 'users.updated', 'admin');
+        }
+        $db->commit();
+        $completed = true;
+        return $deleted;
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         throw $e;
     }
 }

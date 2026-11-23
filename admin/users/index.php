@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../includes/pages/admin_chrome.php';
 cvcarts_require_login('admin');
 
 $db = cvcarts_db();
+cvcarts_cleanup_expired_student_registrations($db);
 $admin = cvcarts_user();
 $route = '/admin/users/index.php';
 $alerts = cvcarts_admin_alerts($db);
@@ -19,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $db->beginTransaction();
     try {
-        $query = $db->prepare("SELECT id, email_verified_at, is_verified, is_active, account_status FROM users WHERE id = :id AND role = 'student' FOR UPDATE");
+        $query = $db->prepare("SELECT id, email_verified_at, is_verified, is_active, account_status FROM users WHERE id = :id AND role = 'student' AND is_verified = 1 AND email_verified_at IS NOT NULL AND registration_status = 'completed' FOR UPDATE");
         $query->execute(['id' => $studentId]);
         $student = $query->fetch(PDO::FETCH_ASSOC);
         if (!$student) {
@@ -72,9 +73,14 @@ if (!isset($sortOptions[$sort])) {
 $pageSizeInput = filter_var($_GET['per_page'] ?? 25, FILTER_VALIDATE_INT);
 $pageSize = in_array($pageSizeInput, [10, 25, 50], true) ? $pageSizeInput : 25;
 $page = max(1, (int)($_GET['page'] ?? 1));
-$where = ["u.role = 'student'"];
+$where = [
+    "u.role = 'student'",
+    'u.is_verified = 1',
+    'u.email_verified_at IS NOT NULL',
+    "u.registration_status = 'completed'",
+];
 $params = [];
-if (in_array($statusFilter, ['active', 'suspended', 'pending_verification'], true)) {
+if (in_array($statusFilter, ['active', 'suspended'], true)) {
     $where[] = 'u.account_status = :status';
     $params['status'] = $statusFilter;
 }
@@ -144,7 +150,7 @@ $flashes = cvcarts_get_flash();
                 <form class="filter-form" data-filter-form method="get" action="<?= cvcarts_h(cvcarts_url($route)) ?>">
                     <label>Search<span class="search-input-wrap"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" name="q" value="<?= cvcarts_h($search) ?>" placeholder="Search"></span></label>
                     <label>Account status<select class="select-control" name="status"><option value="">All statuses</option>
-                        <?php foreach (['active', 'suspended', 'pending_verification'] as $status): ?><option value="<?= cvcarts_h($status) ?>" <?= $statusFilter === $status ? 'selected' : '' ?>><?= cvcarts_h(ucwords(str_replace('_', ' ', $status))) ?></option><?php endforeach; ?>
+                        <?php foreach (['active', 'suspended'] as $status): ?><option value="<?= cvcarts_h($status) ?>" <?= $statusFilter === $status ? 'selected' : '' ?>><?= cvcarts_h(ucwords(str_replace('_', ' ', $status))) ?></option><?php endforeach; ?>
                     </select></label>
                     <label>Registered from<input class="form-control" type="date" name="date_from" value="<?= cvcarts_h($dateFrom) ?>"></label>
                     <label>Registered to<input class="form-control" type="date" name="date_to" value="<?= cvcarts_h($dateTo) ?>"></label>

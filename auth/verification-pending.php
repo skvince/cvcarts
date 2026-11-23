@@ -3,8 +3,9 @@ require __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/mailer.php';
 
 $db = cvcarts_db();
+cvcarts_cleanup_expired_student_registrations($db);
 $userId = (int)($_SESSION['pending_verification_user_id'] ?? 0);
-$statement = $db->prepare("SELECT id, first_name, email FROM users WHERE id = :id AND role = 'student' AND account_status = 'pending_verification' LIMIT 1");
+$statement = $db->prepare("SELECT id, first_name, email FROM users WHERE id = :id AND role = 'student' AND is_verified = 0 AND email_verified_at IS NULL AND account_status = 'pending_verification' AND registration_status = 'pending' LIMIT 1");
 $statement->execute(['id' => $userId]);
 $pendingUser = $statement->fetch(PDO::FETCH_ASSOC);
 if (!$pendingUser) {
@@ -15,9 +16,10 @@ if (!$pendingUser) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_verification'])) {
     cvcarts_require_csrf();
     $resendAction = 'verification_resend_delivery';
+    $rawToken = '';
     $db->beginTransaction();
     try {
-        $statement = $db->prepare("SELECT id, first_name, email FROM users WHERE id = :id AND role = 'student' AND account_status = 'pending_verification' AND is_verified = 0 LIMIT 1 FOR UPDATE");
+        $statement = $db->prepare("SELECT id, first_name, email FROM users WHERE id = :id AND role = 'student' AND account_status = 'pending_verification' AND registration_status = 'pending' AND is_verified = 0 AND email_verified_at IS NULL LIMIT 1 FOR UPDATE");
         $statement->execute(['id' => $pendingUser['id']]);
         $pendingUser = $statement->fetch(PDO::FETCH_ASSOC);
         if ($pendingUser
@@ -29,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_verification']
         }
         if ($pendingUser) {
             $attemptId = cvcarts_record_auth_attempt($resendAction, $pendingUser['email'], false);
+            $rawToken = cvcarts_issue_token((int)$pendingUser['id'], 'student_verification', 15 * 60);
         }
         $db->commit();
     } catch (Throwable $e) {
@@ -44,7 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_verification']
     }
 
     try {
-        $rawToken = cvcarts_issue_token((int)$pendingUser['id'], 'student_verification', 15 * 60);
         error_log('CVCarts verification token issued for pending user id ' . (int)$pendingUser['id'] . ' (token omitted).');
         $mailResult = cvcarts_send_verification_email($pendingUser, $rawToken);
     } catch (Throwable $e) {
@@ -72,29 +74,20 @@ $flashes = cvcarts_get_flash();
     <title>CVCarts | Verify Your Email</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/verification.css')); ?>">
+    <link rel="stylesheet" href="<?php echo cvcarts_h(cvcarts_url('/assets/css/auth/verification.css?v=' . filemtime(__DIR__ . '/../assets/css/auth/verification.css'))); ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="verification-pending-page">
     <div class="ambient-glow glow-one"></div>
     <div class="ambient-glow glow-two"></div>
     <div class="ambient-glow glow-three"></div>
     <main class="auth-container">
-        <section class="brand-section">
-            <div class="brand-top"><span class="brand-indicator"></span><span>CAMPUS VIA CART</span></div>
-            <img src="<?php echo cvcarts_h(cvcarts_url('/assets/images/logo.png')); ?>" alt="CVCarts Logo" class="brand-logo">
-            <div class="brand-content">
-                <p class="brand-eyebrow">ONE LAST STEP</p>
-                <h2>Verify Your Email,<br><span>Join CVCarts.</span></h2>
-                <p class="brand-description">Your account is pending until your official school email address is verified.</p>
-            </div>
-            <div class="brand-bottom"><span>SHOP SMART. LIVE EASY.</span></div>
-        </section>
         <section class="auth-card">
             <div class="card-glow"></div>
             <div class="card-content">
+                <?php require __DIR__ . '/../includes/auth-mobile-logo.php'; ?>
                 <div class="card-header">
                     <div class="welcome-icon">✉</div>
                     <p class="welcome-label">EMAIL VERIFICATION</p>
