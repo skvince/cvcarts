@@ -173,12 +173,18 @@ $flashes = cvcarts_get_flash();
 
                     <div class="input-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
+                        <div class="password-field">
+                            <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
+                            <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" data-password-toggle="password">Show</button>
+                        </div>
                     </div>
 
                     <div class="input-group">
                         <label for="confirm-password">Confirm Password</label>
-                        <input type="password" id="confirm-password" name="confirm_password" placeholder="Re-enter your password" autocomplete="new-password" required>
+                        <div class="password-field">
+                            <input type="password" id="confirm-password" name="confirm_password" placeholder="Re-enter your password" autocomplete="new-password" required>
+                            <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" data-password-toggle="confirm-password">Show</button>
+                        </div>
                     </div>
 
                     <div class="input-group">
@@ -255,6 +261,17 @@ $flashes = cvcarts_get_flash();
             var openLink = document.querySelector('[data-open-terms]');
             var closeButtons = document.querySelectorAll('[data-close-terms]');
 
+            document.querySelectorAll('[data-password-toggle]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var input = document.getElementById(button.dataset.passwordToggle);
+                    var visible = input.type === 'password';
+                    input.type = visible ? 'text' : 'password';
+                    button.textContent = visible ? 'Hide' : 'Show';
+                    button.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+                    button.setAttribute('aria-pressed', visible ? 'true' : 'false');
+                });
+            });
+
             if (openLink && modal) {
                 openLink.addEventListener('click', function (event) {
                     event.preventDefault();
@@ -273,6 +290,13 @@ $flashes = cvcarts_get_flash();
             if (modal) {
                 modal.addEventListener('click', function (event) {
                     if (event.target === modal) {
+                        modal.close();
+                    }
+                });
+
+                modal.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
                         modal.close();
                     }
                 });

@@ -434,6 +434,44 @@ body {
         0 0 18px rgba(24, 169, 104, 0.10);
 }
 
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 72px;
+}
+
+#password::-ms-reveal,
+#confirm-password::-ms-reveal {
+    display: none;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    padding: 6px;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: #a7edb9;
+    font-family: var(--font-body);
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    color: var(--lime);
+    text-decoration: underline;
+}
+
+.password-toggle:focus-visible {
+    outline: 2px solid var(--lime);
+    outline-offset: 3px;
+}
+
 .input-group select {
     width: 100%;
     min-height: 54px;
