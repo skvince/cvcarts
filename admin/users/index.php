@@ -59,7 +59,13 @@ $statusFilter = is_string($_GET['status'] ?? null) ? $_GET['status'] : '';
 $dateFrom = is_string($_GET['date_from'] ?? null) ? $_GET['date_from'] : '';
 $dateTo = is_string($_GET['date_to'] ?? null) ? $_GET['date_to'] : '';
 $sort = is_string($_GET['sort'] ?? null) ? $_GET['sort'] : 'newest';
-$sortOptions = ['newest' => 'u.created_at DESC', 'oldest' => 'u.created_at ASC', 'name_asc' => 'u.first_name ASC, u.last_name ASC', 'name_desc' => 'u.first_name DESC, u.last_name DESC', 'orders_desc' => 'order_count DESC, u.created_at DESC'];
+$sortOptions = [
+    'newest' => 'u.created_at DESC, u.id DESC',
+    'oldest' => 'u.created_at ASC, u.id ASC',
+    'name_asc' => 'u.first_name ASC, u.last_name ASC, u.id ASC',
+    'name_desc' => 'u.first_name DESC, u.last_name DESC, u.id DESC',
+    'orders_desc' => 'order_count DESC, u.created_at DESC, u.id DESC',
+];
 if (!isset($sortOptions[$sort])) {
     $sort = 'newest';
 }

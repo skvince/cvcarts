@@ -1097,7 +1097,6 @@ tbody tr:hover {
 @media (max-width: 768px), (pointer: coarse) {
     [data-filter-form] :is(input:not([type="hidden"]), select, button[type="submit"], [data-filter-reset]) {
         min-height: 44px;
-        touch-action: manipulation;
     }
 }
 

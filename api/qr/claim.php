@@ -100,7 +100,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     cvcarts_qr_response(405, 'Only POST requests are allowed.');
 }
 
-$user = cvcarts_user();
+try {
+    $user = cvcarts_user();
+} catch (Throwable $e) {
+    error_log('CVCarts order QR authentication lookup failed: ' . $e->getMessage());
+    cvcarts_qr_response(503, 'Order information is temporarily unavailable. Please try again.');
+}
 if (!$user) {
     cvcarts_qr_response(401, 'Please sign in again.');
 }
@@ -143,34 +148,44 @@ if ($manualAction) {
     cvcarts_qr_response(422, 'INVALID QR CODE');
 }
 
-$db = cvcarts_db();
+try {
+    $db = cvcarts_db();
+} catch (Throwable $e) {
+    error_log('CVCarts order QR database connection failed: ' . $e->getMessage());
+    cvcarts_qr_response(503, 'Order information is temporarily unavailable. Please try again.');
+}
 if (in_array($action, ['verify', 'verify_manual'], true)) {
-    $order = $manualAction
-        ? cvcarts_qr_manual_order_query($db, $orderIdentifier)
-        : cvcarts_qr_order_query($db, $qrToken);
-    if (!$order) {
-        cvcarts_qr_response(404, $manualAction
-            ? 'Order not found. Please check the Order Number and try again.'
-            : 'INVALID QR CODE');
-    }
-    $state = cvcarts_order_claim_state($order);
-    if ($manualAction && !$state['claimable']) {
-        cvcarts_qr_response(409, cvcarts_qr_manual_unavailable_message($order), [
+    try {
+        $order = $manualAction
+            ? cvcarts_qr_manual_order_query($db, $orderIdentifier)
+            : cvcarts_qr_order_query($db, $qrToken);
+        if (!$order) {
+            cvcarts_qr_response(404, $manualAction
+                ? 'Order not found. Please check the Order Number and try again.'
+                : 'INVALID QR CODE');
+        }
+        $state = cvcarts_order_claim_state($order);
+        if ($manualAction && !$state['claimable']) {
+            cvcarts_qr_response(409, cvcarts_qr_manual_unavailable_message($order), [
+                'order' => cvcarts_qr_order_details($db, $order),
+                'claimable' => false,
+            ]);
+        }
+        if ($manualAction) {
+            $state['message'] = "Order #{$order['reference_number']} verified and ready for release.";
+        }
+        cvcarts_qr_response(200, $state['message'], [
             'order' => cvcarts_qr_order_details($db, $order),
-            'claimable' => false,
+            'claimable' => $state['claimable'],
         ]);
+    } catch (Throwable $e) {
+        error_log('CVCarts order QR verification failed: ' . $e->getMessage());
+        cvcarts_qr_response(500, 'The order could not be verified. Please try again.');
     }
-    if ($manualAction) {
-        $state['message'] = "Order #{$order['reference_number']} verified and ready for release.";
-    }
-    cvcarts_qr_response(200, $state['message'], [
-        'order' => cvcarts_qr_order_details($db, $order),
-        'claimable' => $state['claimable'],
-    ]);
 }
 
-$db->beginTransaction();
 try {
+    $db->beginTransaction();
     $order = $manualAction
         ? cvcarts_qr_manual_order_query($db, $orderIdentifier)
         : cvcarts_qr_order_query($db, $qrToken);

@@ -297,11 +297,21 @@
             });
         }
 
+        function hasFocusedControl(main) {
+            const activeElement = document.activeElement;
+            return !!(activeElement && main.contains(activeElement)
+                && activeElement.matches('input:not([type="hidden"]), select, textarea, button, [contenteditable="true"]'));
+        }
+
         function refreshMainContent() {
             const path = window.location.pathname.replace(appBase.replace(window.location.origin, ''), '') || '/';
             const main = document.querySelector('.main-content');
             if (!main || liveRefreshPaths.indexOf(path) === -1) return;
             if (filterRequestPending) {
+                realtimeRefreshQueued = true;
+                return;
+            }
+            if (hasFocusedControl(main)) {
                 realtimeRefreshQueued = true;
                 return;
             }
@@ -319,6 +329,10 @@
                 const nextMain = nextDocument.querySelector('.main-content');
                 const currentMain = document.querySelector('.main-content');
                 if (!nextMain || !currentMain || hasUnsubmittedChanges || document.querySelector('dialog[open], .modal.show')) return;
+                if (hasFocusedControl(currentMain)) {
+                    realtimeRefreshQueued = true;
+                    return;
+                }
                 const tableScrollPositions = Array.from(currentMain.querySelectorAll('.table-wrapper, .recent-orders-scroll'))
                     .map(function (container) {
                         return { left: container.scrollLeft, top: container.scrollTop };
@@ -352,6 +366,14 @@
         }, true);
         document.addEventListener('submit', function () {
             hasUnsubmittedChanges = false;
+        }, true);
+        document.addEventListener('focusout', function () {
+            window.setTimeout(function () {
+                const main = document.querySelector('.main-content');
+                if (!realtimeRefreshQueued || hasUnsubmittedChanges || !main || hasFocusedControl(main)) return;
+                realtimeRefreshQueued = false;
+                refreshMainContent();
+            }, 0);
         }, true);
         document.addEventListener('cvcarts:content-updated', function () {
             hasUnsubmittedChanges = false;
@@ -564,6 +586,7 @@
             loadFilterPage(url, true);
             return;
         }
+        if (form.matches('[data-ajax-submit]')) return;
         const confirmationText = (submitter && submitter.dataset.confirm) || form.dataset.confirm;
 
         if (confirmationText && form.dataset.confirmed !== 'true') {

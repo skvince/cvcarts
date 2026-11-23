@@ -53,6 +53,10 @@
                 'X-Requested-With': 'XMLHttpRequest'
             }
         }).then(function (response) {
+            const contentType = response.headers.get('content-type') || '';
+            if (!/application\/json/i.test(contentType)) {
+                throw new Error('The notification update returned an unexpected response. Reload the page and try again.');
+            }
             return response.json().then(function (result) {
                 if (!response.ok || !result || result.success !== true) {
                     throw new Error(result && result.message ? result.message : 'The notification could not be marked as read.');

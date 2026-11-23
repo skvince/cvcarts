@@ -512,7 +512,11 @@ function cvcarts_require_login(?string $role = null): void {
     header('Pragma: no-cache');
     header('Expires: 0');
     $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
-    if (strpos($scriptName, '/api/') === false) {
+    $accept = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+    $requestedWith = strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    $isJsonRequest = str_contains($accept, 'application/json')
+        || $requestedWith === 'xmlhttprequest';
+    if (strpos($scriptName, '/api/') === false && !$isJsonRequest) {
         cvcarts_inactivity_bootstrap();
     }
 }

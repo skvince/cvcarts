@@ -38,7 +38,7 @@ $csrfToken = cvcarts_csrf_token();
                         <input id="scan-image-file" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden aria-describedby="camera-help">
                     </div>
                     <div id="status" class="flash-message" role="status" aria-live="polite">Ready to scan a pickup QR code.</div>
-                    <form id="manual-verify-form" class="form-field">
+                    <form id="manual-verify-form" class="form-field" data-ajax-submit>
                         <label class="form-label" for="manual-order-identifier">Manual Order Verification</label>
                         <div class="form-inline"><input class="form-control" id="manual-order-identifier" type="text" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="Enter Order Number (e.g., ORD-1024)" autocomplete="off" aria-describedby="manual-order-help" required><button class="btn btn-small" type="submit">Verify Order</button></div>
                         <small id="manual-order-help" class="form-help">Only orders marked as 'Ready to Claim' can be verified manually. The camera light turns off when you stop scanning or leave this page.</small>
@@ -47,22 +47,22 @@ $csrfToken = cvcarts_csrf_token();
                     <button id="clear-scan" class="btn btn-small btn-secondary" type="button">Clear Scan</button>
                 </section>
                 <section id="order-result" class="panel claim-result" hidden aria-live="polite">
-                    <h2>Order Verification</h2>
+                    <h2 id="result-heading">Order Verification</h2>
                     <p id="result-message" class="status-note"></p>
                     <div class="summary-grid">
-                        <div><span>Order number</span><strong id="order-number"></strong></div>
-                        <div><span>Student</span><strong id="student-name"></strong></div>
-                        <div><span>Student email</span><strong id="student-email"></strong></div>
-                        <div><span>Order status</span><strong id="order-status"></strong></div>
-                        <div><span>Payment status</span><strong id="payment-status"></strong></div>
-                        <div><span>Payment method</span><strong id="payment-method"></strong></div>
-                        <div><span>Total amount</span><strong id="total-amount"></strong></div>
-                        <div><span>Order date</span><strong id="order-date"></strong></div>
-                        <div><span>Date received</span><strong id="claim-date"></strong></div>
-                        <div><span>Processed by</span><strong id="claimed-by"></strong></div>
+                        <div><span id="order-number-label">Order number</span><strong id="order-number"></strong></div>
+                        <div><span id="student-name-label">Student</span><strong id="student-name"></strong></div>
+                        <div><span id="student-email-label">Student email</span><strong id="student-email"></strong></div>
+                        <div><span id="order-status-label">Order status</span><strong id="order-status"></strong></div>
+                        <div><span id="payment-status-label">Payment status</span><strong id="payment-status"></strong></div>
+                        <div><span id="payment-method-label">Payment method</span><strong id="payment-method"></strong></div>
+                        <div><span id="total-amount-label">Total amount</span><strong id="total-amount"></strong></div>
+                        <div id="order-date-field"><span>Order date</span><strong id="order-date"></strong></div>
+                        <div id="claim-date-field"><span>Date received</span><strong id="claim-date"></strong></div>
+                        <div id="claimed-by-field"><span>Processed by</span><strong id="claimed-by"></strong></div>
                     </div>
-                    <h3>Products</h3>
-                    <div class="table-wrapper"><table><thead><tr><th>Product</th><th>Size</th><th>Quantity</th><th>Unit price</th></tr></thead><tbody id="order-items"></tbody></table></div>
+                    <h3 id="items-heading">Products</h3>
+                    <div class="table-wrapper"><table><thead><tr><th id="item-name-heading">Product</th><th id="item-size-heading">Size</th><th id="item-quantity-heading">Quantity</th><th id="item-price-heading">Unit price</th></tr></thead><tbody id="order-items"></tbody></table></div>
                     <div class="claim-action">
                         <button id="claim-order" class="btn" type="button" hidden>Confirm &amp; Mark as Claimed</button>
                     </div>
@@ -84,6 +84,12 @@ $csrfToken = cvcarts_csrf_token();
             const manualVerifyForm = document.getElementById('manual-verify-form');
             const manualOrderInput = document.getElementById('manual-order-identifier');
             const manualVerifyButton = manualVerifyForm.querySelector('button[type="submit"]');
+            const resultHeading = document.getElementById('result-heading');
+            const itemsHeading = document.getElementById('items-heading');
+            const itemNameHeading = document.getElementById('item-name-heading');
+            const itemSizeHeading = document.getElementById('item-size-heading');
+            const itemQuantityHeading = document.getElementById('item-quantity-heading');
+            const itemPriceHeading = document.getElementById('item-price-heading');
             const clearScanButton = document.getElementById('clear-scan');
             const switchCameraButton = document.getElementById('switch-camera');
             const scanImageButton = document.getElementById('scan-image');
@@ -135,7 +141,27 @@ $csrfToken = cvcarts_csrf_token();
                 }
             }
 
+            function setResultMode(productMode) {
+                resultHeading.textContent = productMode ? 'Inventory Product' : 'Order Verification';
+                document.getElementById('order-number-label').textContent = productMode ? 'Barcode / SKU' : 'Order number';
+                document.getElementById('student-name-label').textContent = productMode ? 'Product' : 'Student';
+                document.getElementById('student-email-label').textContent = productMode ? 'Category' : 'Student email';
+                document.getElementById('order-status-label').textContent = productMode ? 'Availability' : 'Order status';
+                document.getElementById('payment-status-label').textContent = productMode ? 'Stock' : 'Payment status';
+                document.getElementById('payment-method-label').textContent = productMode ? 'Inventory' : 'Payment method';
+                document.getElementById('total-amount-label').textContent = productMode ? 'Unit price' : 'Total amount';
+                document.getElementById('order-date-field').hidden = productMode;
+                document.getElementById('claim-date-field').hidden = productMode;
+                document.getElementById('claimed-by-field').hidden = productMode;
+                itemsHeading.textContent = productMode ? 'Product stock' : 'Products';
+                itemNameHeading.textContent = 'Product';
+                itemSizeHeading.textContent = 'Size';
+                itemQuantityHeading.textContent = productMode ? 'Stock' : 'Quantity';
+                itemPriceHeading.textContent = productMode ? 'Price' : 'Unit price';
+            }
+
             function showOrder(order, claimable) {
+                setResultMode(false);
                 currentOrderClaimable = claimable === true;
                 setText('order-number', order.reference_number);
                 setText('student-name', order.student_name);
@@ -223,16 +249,42 @@ $csrfToken = cvcarts_csrf_token();
             function onScanSuccess(decodedText) {
                 if (scanning || !decodedText || decodedText === lastScannedToken) return;
                 scanning = true;
+                setRequestBusy(true);
                 currentToken = String(decodedText).trim();
                 currentOrderIdentifier = '';
                 lastScannedToken = currentToken;
                 manualOrderInput.value = '';
                 currentOrderClaimable = false;
-                const isLikelyBarcode = /^[0-9]{8,14}$/.test(currentToken) || /^[A-Za-z0-9_-]{5,64}$/.test(currentToken);
-                fetch(barcodeApiUrl + '?barcode=' + encodeURIComponent(currentToken), {credentials: 'same-origin'})
-                    .then(function (response) { return response.json().then(function (data) { return {ok: response.ok, data: data}; }); })
+                const isOrderQrToken = /^(?:[a-f0-9]{32}|[a-f0-9]{64})$/i.test(currentToken);
+                const isLikelyBarcode = !isOrderQrToken && /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(currentToken);
+                const lookup = isOrderQrToken
+                    ? Promise.resolve({ok: false, status: 404, data: {}})
+                    : fetch(barcodeApiUrl + '?barcode=' + encodeURIComponent(currentToken), {
+                        credentials: 'same-origin',
+                        headers: {Accept: 'application/json'}
+                    }).then(function (response) {
+                        return response.json().then(function (data) {
+                            return {ok: response.ok, status: response.status, data: data};
+                        });
+                    });
+                lookup
                     .then(function (barcodeResult) {
+                        if (barcodeResult.status === 409) {
+                            showMessage(barcodeResult.data.message || 'This barcode is assigned to multiple products. Correct the inventory barcodes before scanning again.', 'error');
+                            lastScannedToken = '';
+                            scanning = false;
+                            setRequestBusy(false);
+                            return true;
+                        }
+                        if (!barcodeResult.ok && barcodeResult.status !== 404) {
+                            showMessage(barcodeResult.data.message || 'The inventory lookup could not be completed. Please try again.', 'error');
+                            lastScannedToken = '';
+                            scanning = false;
+                            setRequestBusy(false);
+                            return true;
+                        }
                         if (barcodeResult.ok && barcodeResult.data.success && barcodeResult.data.product) {
+                            setResultMode(true);
                             const product = barcodeResult.data.product;
                             setText('order-number', product.barcode || currentToken);
                             setText('student-name', product.name);
@@ -244,26 +296,34 @@ $csrfToken = cvcarts_csrf_token();
                             setText('order-date', '—');
                             setText('claim-date', '—');
                             setText('claimed-by', '—');
-                            const itemRow = document.createElement('tr');
-                            [product.name, '—', String(product.stock), '₱' + Number(product.price).toFixed(2)].forEach(function (value) {
-                                const cell = document.createElement('td');
-                                cell.textContent = value;
-                                itemRow.appendChild(cell);
+                            const itemsBody = document.getElementById('order-items');
+                            itemsBody.replaceChildren();
+                            const sizeRows = Array.isArray(product.sizes) ? product.sizes : [];
+                            const stockRows = sizeRows.length ? sizeRows : [{size: '—', stock: product.stock}];
+                            stockRows.forEach(function (stockRow) {
+                                const itemRow = document.createElement('tr');
+                                [product.name, stockRow.size || '—', String(stockRow.stock), '₱' + Number(product.price).toFixed(2)].forEach(function (value) {
+                                    const cell = document.createElement('td');
+                                    cell.textContent = value;
+                                    itemRow.appendChild(cell);
+                                });
+                                itemsBody.appendChild(itemRow);
                             });
-                            document.getElementById('order-items').replaceChildren(itemRow);
                             claimButton.hidden = true;
                             resultPanel.hidden = false;
                             resultMessage.textContent = 'Matching inventory product found.';
                             showMessage('Product Found: ' + product.name, 'success');
                             window.closeAlert();
                             scanning = false;
+                            setRequestBusy(false);
                             return true;
                         }
                         return false;
                     })
                     .then(function (matched) {
                         if (matched) return;
-                        if (isLikelyBarcode && !/^[A-Za-z0-9_-]{24,64}$/.test(currentToken)) {
+                        if (isLikelyBarcode) {
+                            setResultMode(true);
                             resultPanel.hidden = false;
                             document.getElementById('order-items').replaceChildren();
                             claimButton.hidden = true;
@@ -309,13 +369,17 @@ $csrfToken = cvcarts_csrf_token();
                     })
                     .catch(function () {
                         window.closeAlert();
-                        showMessage('Connection error. Please scan the receipt again.', 'error');
-                        window.showError('Connection error', 'The order could not be verified. Please try scanning again.');
+                        showMessage('Connection error while looking up this code. Check the connection and scan again.', 'error');
+                        window.showError('Connection error', 'The code could not be looked up. Check the connection and try again.');
                         lastScannedToken = '';
-                    })
-                    .finally(function () {
                         scanning = false;
                         setRequestBusy(false);
+                    })
+                    .finally(function () {
+                        if (scanning) {
+                            scanning = false;
+                            setRequestBusy(false);
+                        }
                         claimButton.disabled = claimButton.hidden || !currentOrderClaimable;
                     });
                     });
@@ -481,6 +545,7 @@ $csrfToken = cvcarts_csrf_token();
             });
 
             function resetScanState() {
+                setResultMode(false);
                 currentToken = '';
                 currentOrderIdentifier = '';
                 lastScannedToken = '';

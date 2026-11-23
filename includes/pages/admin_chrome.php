@@ -87,10 +87,23 @@ function cvcarts_admin_header(array $user, array $alerts = []): void {
 }
 
 function cvcarts_admin_sidebar(string $active): void {
-    $notificationCount = 0;
+    $sidebarBadges = [
+        'notifications' => 0,
+        'ready-to-claim' => 0,
+        'order-status' => 0,
+    ];
     $currentUser = cvcarts_user();
     if ($currentUser && $currentUser['role'] === 'admin') {
-        $notificationCount = cvcarts_admin_notification_count(cvcarts_db(), (int)$currentUser['id']);
+        $db = cvcarts_db();
+        $sidebarBadges['notifications'] = cvcarts_admin_notification_count($db, (int)$currentUser['id']);
+        $orderCounts = $db->query(
+            "SELECT
+                SUM(CASE WHEN payment_status = 'Paid' AND order_status = 'Ready to Claim' AND claim_date IS NULL THEN 1 ELSE 0 END) AS ready_to_claim,
+                SUM(CASE WHEN order_status IN ('Pending', 'Payment Verification', 'Payment Rejected', 'In Transit') THEN 1 ELSE 0 END) AS order_status
+             FROM orders"
+        )->fetch(PDO::FETCH_ASSOC);
+        $sidebarBadges['ready-to-claim'] = (int)($orderCounts['ready_to_claim'] ?? 0);
+        $sidebarBadges['order-status'] = (int)($orderCounts['order_status'] ?? 0);
     }
     $items = [
         'dashboard' => ['bi-speedometer2', 'Dashboard', '/admin/dashboard.php'],
@@ -109,7 +122,7 @@ function cvcarts_admin_sidebar(string $active): void {
         <nav class="sidebar-nav">
             <?php foreach ($items as $key => $item): ?>
                 <a href="<?= cvcarts_h(cvcarts_url($item[2])) ?>" <?= $key === $active ? 'class="active" aria-current="page"' : '' ?>>
-                    <span class="nav-icon" aria-hidden="true"><i class="bi <?= cvcarts_h($item[0]) ?>"></i></span> <?= cvcarts_h($item[1]) ?><?php if ($key === 'notifications' && $notificationCount > 0): ?> <span class="sidebar-notification-badge"><?= (int)$notificationCount ?></span><?php endif; ?>
+                    <span class="nav-icon" aria-hidden="true"><i class="bi <?= cvcarts_h($item[0]) ?>"></i></span> <?= cvcarts_h($item[1]) ?><?php if (($sidebarBadges[$key] ?? 0) > 0): ?> <span class="sidebar-notification-badge"><?= (int)$sidebarBadges[$key] ?></span><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>

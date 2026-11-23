@@ -6,7 +6,6 @@ $db = cvcarts_db();
 $user = cvcarts_user();
 $userId = (int)$user['id'];
 $stats = [
-    'orders' => (int)$db->query('SELECT COUNT(*) FROM orders WHERE user_id = ' . $userId)->fetchColumn(),
     'cart' => (int)$db->query('SELECT COALESCE(SUM(quantity), 0) FROM cart_items WHERE user_id = ' . $userId)->fetchColumn(),
     'notifications' => (int)$db->query('SELECT COUNT(*) FROM notifications WHERE user_id = ' . $userId . ' AND is_read = 0')->fetchColumn(),
     'pending' => (int)$db->query('SELECT COUNT(*) FROM orders WHERE user_id = ' . $userId . ' AND order_status IN ("Pending", "Payment Verification")')->fetchColumn(),
@@ -21,13 +20,10 @@ $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $products = $db->query('SELECT id, name, category, price, stock FROM products WHERE is_active = 1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 3')->fetchAll(PDO::FETCH_ASSOC);
 $flashes = cvcarts_get_flash();
 $statCards = [
-    ['label' => 'Total Orders', 'value' => number_format($stats['orders']), 'icon' => 'bi-bag-check', 'tone' => 'neutral'],
     ['label' => 'Pending Payments', 'value' => number_format($stats['pending_payments']), 'icon' => 'bi-hourglass-split', 'tone' => 'amber'],
     ['label' => 'Approved Payments', 'value' => number_format($stats['approved']), 'icon' => 'bi-check-circle', 'tone' => 'emerald'],
     ['label' => 'Ready to Claim', 'value' => number_format($stats['ready']), 'icon' => 'bi-box2-heart', 'tone' => 'blue'],
     ['label' => 'Claimed Orders', 'value' => number_format($stats['completed']), 'icon' => 'bi-bag-check-fill', 'tone' => 'emerald'],
-    ['label' => 'Cart Items', 'value' => number_format($stats['cart']), 'icon' => 'bi-cart3', 'tone' => 'neutral'],
-    ['label' => 'Unread Notifications', 'value' => number_format($stats['notifications']), 'icon' => 'bi-bell', 'tone' => 'blue'],
 ];
 ?>
 <!DOCTYPE html>

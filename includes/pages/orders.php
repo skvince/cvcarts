@@ -26,7 +26,13 @@ $orderDateTo = !$isAdmin && $ordersHistory && is_string($_GET['order_date_to'] ?
 $verifiedDate = is_string($_GET['verified_date'] ?? null) ? $_GET['verified_date'] : '';
 $receivedDate = is_string($_GET['received_date'] ?? null) ? $_GET['received_date'] : '';
 $sort = is_string($_GET['sort'] ?? null) ? $_GET['sort'] : 'newest';
-$sortOptions = ['newest' => 'o.created_at DESC, o.id DESC', 'oldest' => 'o.created_at ASC, o.id ASC'];
+$sortDateExpression = $ordersHistory
+    ? 'COALESCE(o.claim_date, o.cancelled_at, o.updated_at, o.created_at)'
+    : ($ordersReady ? 'COALESCE(o.verified_at, o.created_at)' : 'o.created_at');
+$sortOptions = [
+    'newest' => $sortDateExpression . ' DESC, o.id DESC',
+    'oldest' => $sortDateExpression . ' ASC, o.id ASC',
+];
 if (!isset($sortOptions[$sort])) {
     $sort = 'newest';
 }

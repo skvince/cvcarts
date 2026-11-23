@@ -12,6 +12,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_product'])) {
         $name = is_string($_POST['name'] ?? null) ? trim($_POST['name']) : '';
         $category = is_string($_POST['category'] ?? null) ? trim($_POST['category']) : '';
+        $barcode = is_string($_POST['barcode'] ?? null) ? trim($_POST['barcode']) : '';
+        $barcodeIsValid = $barcode === '' || preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/', $barcode) === 1;
+        $barcode = $barcode === '' ? null : $barcode;
         $description = is_string($_POST['description'] ?? null) ? trim($_POST['description']) : '';
         $imageUrl = '';
         $imageFile = $_FILES['image_file'] ?? null;
@@ -37,16 +40,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if ($name === '' || strlen($name) > 150 || $category === '' || strlen($category) > 100 || strlen($description) > 5000
+        if ($name === '' || strlen($name) > 150 || $category === '' || strlen($category) > 100 || !$barcodeIsValid || strlen($description) > 5000
             || $price === false || !is_finite((float)$price) || $price < 0 || $stock === false || $stock < 0 || !$imageIsValid || $sizeError !== null || ($hasSizes && !$sizes)) {
-            cvcarts_flash('error', $sizeError ?? ($hasSizes && !$sizes
+            cvcarts_flash('error', $sizeError ?? (!$barcodeIsValid
+                ? 'Enter a valid barcode or SKU using letters, numbers, hyphens, or underscores (up to 64 characters).'
+                : ($hasSizes && !$sizes
                 ? 'Add at least one size and its stock for a sized product.'
-                : 'Enter valid product details and a non-negative price and stock, and upload a valid image if desired.'));
+                : 'Enter valid product details and a non-negative price and stock, and upload a valid image if desired.')));
         } else {
             $db->beginTransaction();
             try {
-                $db->prepare('INSERT INTO products (name, description, category, price, stock, has_sizes, image_url, is_active) VALUES (:name, :description, :category, :price, 0, 0, :image_url, 1)')->execute([
-                    'name' => $name, 'description' => $description ?: null, 'category' => $category, 'price' => $price,
+                if ($barcode !== null) {
+                    $barcodeCheck = $db->prepare('SELECT id FROM products WHERE barcode = :barcode LIMIT 1 FOR UPDATE');
+                    $barcodeCheck->execute(['barcode' => $barcode]);
+                    if ($barcodeCheck->fetchColumn() !== false) {
+                        throw new InvalidArgumentException('This barcode or SKU is already assigned to another product.');
+                    }
+                }
+                $db->prepare('INSERT INTO products (name, description, category, barcode, price, stock, has_sizes, image_url, is_active) VALUES (:name, :description, :category, :barcode, :price, 0, 0, :image_url, 1)')->execute([
+                    'name' => $name, 'description' => $description ?: null, 'category' => $category, 'barcode' => $barcode, 'price' => $price,
                     'image_url' => $imageUrl ?: null,
                 ]);
                 $productId = (int)$db->lastInsertId();
@@ -70,6 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $productId = filter_var($_POST['product_id'] ?? '', FILTER_VALIDATE_INT);
         $name = is_string($_POST['name'] ?? null) ? trim($_POST['name']) : '';
         $category = is_string($_POST['category'] ?? null) ? trim($_POST['category']) : '';
+        $barcode = is_string($_POST['barcode'] ?? null) ? trim($_POST['barcode']) : '';
+        $barcodeIsValid = $barcode === '' || preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/', $barcode) === 1;
+        $barcode = $barcode === '' ? null : $barcode;
         $description = is_string($_POST['description'] ?? null) ? trim($_POST['description']) : '';
         $imageUrl = '';
         $imageFile = $_FILES['image_file'] ?? null;
@@ -104,11 +119,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if (!$productId || $name === '' || strlen($name) > 150 || $category === '' || strlen($category) > 100 || strlen($description) > 5000
+        if (!$productId || $name === '' || strlen($name) > 150 || $category === '' || strlen($category) > 100 || !$barcodeIsValid || strlen($description) > 5000
             || $price === false || !is_finite((float)$price) || $price < 0 || $stock === false || $stock < 0 || !$imageIsValid || $sizeError !== null || ($hasSizes && !$sizes)) {
-            cvcarts_flash('error', $sizeError ?? ($hasSizes && !$sizes
+            cvcarts_flash('error', $sizeError ?? (!$barcodeIsValid
+                ? 'Enter a valid barcode or SKU using letters, numbers, hyphens, or underscores (up to 64 characters).'
+                : ($hasSizes && !$sizes
                 ? 'Add at least one size and its stock for a sized product.'
-                : 'Enter valid product details and a non-negative price and stock, and upload a valid image if desired.'));
+                : 'Enter valid product details and a non-negative price and stock, and upload a valid image if desired.')));
         } else {
             $db->beginTransaction();
             try {
@@ -118,9 +135,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($editLock->fetchColumn() === false) {
                     throw new RuntimeException('This product is no longer available for editing.');
                 }
-                $db->prepare('UPDATE products SET name = :name, description = :description, category = :category, price = :price, image_url = :image_url WHERE id = :id AND deleted_at IS NULL')
+                if ($barcode !== null) {
+                    $barcodeCheck = $db->prepare('SELECT id FROM products WHERE barcode = :barcode AND id <> :id LIMIT 1 FOR UPDATE');
+                    $barcodeCheck->execute(['barcode' => $barcode, 'id' => $productId]);
+                    if ($barcodeCheck->fetchColumn() !== false) {
+                        throw new InvalidArgumentException('This barcode or SKU is already assigned to another product.');
+                    }
+                }
+                $db->prepare('UPDATE products SET name = :name, description = :description, category = :category, barcode = :barcode, price = :price, image_url = :image_url WHERE id = :id AND deleted_at IS NULL')
                     ->execute([
-                        'name' => $name, 'description' => $description ?: null, 'category' => $category, 'price' => $price,
+                        'name' => $name, 'description' => $description ?: null, 'category' => $category, 'barcode' => $barcode, 'price' => $price,
                         'image_url' => $imageUrl ?: null, 'id' => $productId,
                     ]);
                 cvcarts_update_product_inventory($db, (int)$productId, $hasSizes, (int)$stock, $sizes, (int)$user['id']);
@@ -245,14 +269,14 @@ $pageSizeInput = filter_var($_GET['per_page'] ?? 25, FILTER_VALIDATE_INT);
 $pageSize = in_array($pageSizeInput, [10, 25, 50], true) ? $pageSizeInput : 25;
 $page = max(1, (int)($_GET['page'] ?? 1));
 $sortOptions = [
-    'name_asc' => 'name ASC',
-    'name_desc' => 'name DESC',
-    'price_asc' => 'price ASC, name ASC',
-    'price_desc' => 'price DESC, name ASC',
-    'stock_asc' => 'stock ASC, name ASC',
-    'stock_desc' => 'stock DESC, name ASC',
-    'newest' => 'created_at DESC, name ASC',
-    'oldest' => 'created_at ASC, name ASC',
+    'name_asc' => 'name ASC, is_active DESC, id ASC',
+    'name_desc' => 'name DESC, is_active DESC, id DESC',
+    'price_asc' => 'price ASC, name ASC, is_active DESC, id ASC',
+    'price_desc' => 'price DESC, name ASC, is_active DESC, id ASC',
+    'stock_asc' => 'stock ASC, name ASC, is_active DESC, id ASC',
+    'stock_desc' => 'stock DESC, name ASC, is_active DESC, id ASC',
+    'newest' => 'created_at DESC, is_active DESC, id DESC',
+    'oldest' => 'created_at ASC, is_active DESC, id ASC',
 ];
 if (!isset($sortOptions[$sort])) {
     $sort = 'name_asc';
@@ -283,7 +307,7 @@ $page = min($page, $totalPages);
 $stmt = $db->prepare(
     'SELECT products.*,
         (SELECT COUNT(*) FROM cart_items ci WHERE ci.product_id = products.id) AS cart_item_count
-     FROM products' . $whereSql . ' ORDER BY is_active DESC, ' . $sortOptions[$sort] . ' LIMIT :limit OFFSET :offset'
+     FROM products' . $whereSql . ' ORDER BY ' . $sortOptions[$sort] . ' LIMIT :limit OFFSET :offset'
 );
 foreach ($params as $key => $value) {
     $stmt->bindValue(':' . $key, $value);
@@ -384,6 +408,7 @@ $flashes = cvcarts_get_flash();
                             <input type="hidden" name="add_product" value="1">
                             <div class="form-field"><label class="form-label" for="product-name">Item</label><input class="form-control" id="product-name" name="name" required></div>
                             <div class="form-field"><label class="form-label" for="product-category">Category</label><input class="form-control" id="product-category" name="category" required></div>
+                            <div class="form-field"><label class="form-label" for="product-barcode">Barcode / SKU</label><input class="form-control" id="product-barcode" name="barcode" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" autocomplete="off"><p class="form-help">Optional. Use a unique barcode or SKU to look up this item in the QR Scanner.</p></div>
                             <div class="form-field"><label class="form-label" for="product-price">Price</label><input class="form-control" id="product-price" type="number" step="0.01" min="0" name="price" required></div>
                             <div class="form-field"><label class="form-label" for="product-has-sizes">Does this product have sizes?</label><select class="form-select" id="product-has-sizes" name="has_sizes"><option value="0">No</option><option value="1">Yes</option></select></div>
                             <div class="form-field regular-stock-field"><label class="form-label" for="product-stock">Regular stock</label><input class="form-control" id="product-stock" type="number" min="0" name="stock" value="0" required></div>
@@ -444,6 +469,7 @@ $flashes = cvcarts_get_flash();
                                                         <input type="hidden" name="update_product" value="1"><input type="hidden" name="product_id" value="<?php echo (int)$product['id']; ?>">
                                                         <div class="form-field"><label class="form-label" for="product-name-<?php echo (int)$product['id']; ?>">Name</label><input class="form-control" id="product-name-<?php echo (int)$product['id']; ?>" name="name" maxlength="150" value="<?php echo cvcarts_h($product['name']); ?>" required></div>
                                                         <div class="form-field"><label class="form-label" for="product-category-<?php echo (int)$product['id']; ?>">Category</label><input class="form-control" id="product-category-<?php echo (int)$product['id']; ?>" name="category" maxlength="100" value="<?php echo cvcarts_h($product['category']); ?>" required></div>
+                                                        <div class="form-field"><label class="form-label" for="product-barcode-<?php echo (int)$product['id']; ?>">Barcode / SKU</label><input class="form-control" id="product-barcode-<?php echo (int)$product['id']; ?>" name="barcode" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" value="<?php echo cvcarts_h($product['barcode'] ?? ''); ?>" autocomplete="off"><p class="form-help">Optional. Must be unique; scanned in the Admin QR Scanner.</p></div>
                                                         <div class="form-field"><label class="form-label" for="product-description-<?php echo (int)$product['id']; ?>">Description</label><textarea class="form-control" id="product-description-<?php echo (int)$product['id']; ?>" name="description" rows="3"><?php echo cvcarts_h($product['description'] ?? ''); ?></textarea></div>
                                                         <div class="form-field"><label class="form-label" for="product-upload-<?php echo (int)$product['id']; ?>">Upload Image</label><input class="form-control" id="product-upload-<?php echo (int)$product['id']; ?>" type="file" name="image_file" accept="image/*" data-image-preview="#product-current-image-<?php echo (int)$product['id']; ?>" data-image-resize="true"><p class="form-help">Choose a photo from your device. Large photos are resized before upload; maximum processed size is 3.5 MB.</p><img id="product-current-image-<?php echo (int)$product['id']; ?>" src="<?php echo cvcarts_h(cvcarts_product_image_url($product['image_url'] ?? '')); ?>" alt="Current <?php echo cvcarts_h($product['name']); ?> image" class="inventory-current-thumb" onerror="this.onerror=null;this.src='<?php echo cvcarts_h(cvcarts_url('/assets/images/default-product.svg')); ?>'"></div>
                                                         <div class="form-field"><label class="form-label" for="product-price-<?php echo (int)$product['id']; ?>">Price</label><input class="form-control" id="product-price-<?php echo (int)$product['id']; ?>" type="number" min="0" step="0.01" name="price" value="<?php echo cvcarts_h((string)$product['price']); ?>" required></div>
@@ -465,6 +491,7 @@ $flashes = cvcarts_get_flash();
                                                 <div class="modal-body">
                                                     <div class="summary-grid">
                                                         <div><span>Category</span><strong><?php echo cvcarts_h($product['category']); ?></strong></div>
+                                                        <div><span>Barcode / SKU</span><strong><?php echo cvcarts_h($product['barcode'] ?? 'Not set'); ?></strong></div>
                                                         <div><span>Price</span><strong><?php echo cvcarts_format_money((float)$product['price']); ?></strong></div>
                                                         <div><span>Availability</span><strong><?php echo (int)$product['is_active'] === 1 ? 'Active' : 'Archived'; ?></strong></div>
                                                         <div><span>Total stock</span><strong><?php echo (int)$product['stock']; ?></strong></div>
