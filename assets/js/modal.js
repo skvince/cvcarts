@@ -79,6 +79,38 @@
 
     let filterRequestPending = false;
 
+    function replaceMainContentPreservingImages(nextMain, currentMain) {
+        const oldImageQueues = new Map();
+        currentMain.querySelectorAll('img[src]').forEach(function (image) {
+            const src = image.getAttribute('src');
+            if (!src) return;
+            if (!oldImageQueues.has(src)) oldImageQueues.set(src, []);
+            oldImageQueues.get(src).push(image);
+        });
+
+        const replacement = document.createElement('div');
+        Array.from(nextMain.childNodes).forEach(function (node) {
+            replacement.appendChild(document.importNode(node, true));
+        });
+
+        replacement.querySelectorAll('img[src]').forEach(function (nextImage) {
+            const src = nextImage.getAttribute('src');
+            const queue = oldImageQueues.get(src);
+            if (!queue || queue.length === 0) return;
+            const oldImage = queue.shift();
+
+            Array.from(oldImage.attributes).forEach(function (attribute) {
+                if (!nextImage.hasAttribute(attribute.name)) oldImage.removeAttribute(attribute.name);
+            });
+            Array.from(nextImage.attributes).forEach(function (attribute) {
+                oldImage.setAttribute(attribute.name, attribute.value);
+            });
+            nextImage.replaceWith(oldImage);
+        });
+
+        currentMain.replaceChildren.apply(currentMain, Array.from(replacement.childNodes));
+    }
+
     function loadFilterPage(url, addHistory) {
         if (filterRequestPending) return;
         filterRequestPending = true;
@@ -99,9 +131,7 @@
             if (addHistory) window.history.pushState({}, '', url.href);
             document.title = nextDocument.title;
             main.removeAttribute('aria-busy');
-            main.replaceChildren.apply(main, Array.from(nextMain.childNodes).map(function (node) {
-                return document.importNode(node, true);
-            }));
+            replaceMainContentPreservingImages(nextMain, main);
             filterRequestPending = false;
             document.dispatchEvent(new CustomEvent('cvcarts:content-updated'));
         }).catch(function (error) {
@@ -339,9 +369,7 @@
                     });
                 const pageScrollX = window.scrollX;
                 const pageScrollY = window.scrollY;
-                currentMain.replaceChildren.apply(currentMain, Array.from(nextMain.childNodes).map(function (node) {
-                    return document.importNode(node, true);
-                }));
+                replaceMainContentPreservingImages(nextMain, currentMain);
                 window.requestAnimationFrame(function () {
                     window.scrollTo(pageScrollX, pageScrollY);
                     Array.from(currentMain.querySelectorAll('.table-wrapper, .recent-orders-scroll'))

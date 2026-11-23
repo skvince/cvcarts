@@ -34,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->prepare('UPDATE users SET profile_image = :profile_image, updated_at = NOW() WHERE id = :id')
                     ->execute(['profile_image' => $newImagePath, 'id' => $user['id']]);
                 cvcarts_remove_profile_image(is_string($user['profile_image'] ?? null) ? $user['profile_image'] : null);
+                cvcarts_emit_realtime_event($db, 'user.updated', 'student', (int)$user['id']);
+                cvcarts_emit_realtime_event($db, 'users.updated', 'admin');
                 cvcarts_flash('success', 'Your profile photo was updated.');
             } catch (RuntimeException $e) {
                 if ($newImagePath !== null) {

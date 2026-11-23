@@ -25,6 +25,15 @@
     object-fit: cover;
 }
 
+.users-table .user-avatar-placeholder {
+    display: block;
+    background-color: #dff3e5;
+    background-image: url('../../images/default-student-avatar.svg');
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
 .users-table .user-name {
     min-width: 0;
     color: var(--deep-green);

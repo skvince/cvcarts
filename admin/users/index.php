@@ -167,9 +167,14 @@ $flashes = cvcarts_get_flash();
                     <?php foreach ($students as $student): ?>
                         <?php $verified = (int)$student['is_verified'] === 1 && $student['email_verified_at'] !== null; ?>
                         <?php $studentName = trim($student['first_name'] . ' ' . ($student['middle_name'] ?? '') . ' ' . $student['last_name']); ?>
+                        <?php $profileImage = is_string($student['profile_image'] ?? null) ? trim($student['profile_image']) : ''; ?>
                         <tr>
                             <td><div class="user-identity">
-                                <img class="user-avatar" src="<?= cvcarts_h(cvcarts_profile_image_url(is_string($student['profile_image'] ?? null) ? $student['profile_image'] : null)) ?>" alt="<?= cvcarts_h($studentName . ' profile picture') ?>" loading="lazy" onerror="this.onerror=null;this.src='<?= cvcarts_h(cvcarts_url('/assets/images/default-student-avatar.svg')) ?>'">
+                                <?php if ($profileImage === ''): ?>
+                                    <span class="user-avatar user-avatar-placeholder" role="img" aria-label="<?= cvcarts_h($studentName . ' profile picture') ?>"></span>
+                                <?php else: ?>
+                                    <img class="user-avatar" src="<?= cvcarts_h(cvcarts_profile_image_url($profileImage)) ?>" alt="<?= cvcarts_h($studentName . ' profile picture') ?>" width="42" height="42" decoding="sync" onerror="this.onerror=null;this.src='<?= cvcarts_h(cvcarts_url('/assets/images/default-student-avatar.svg')) ?>'">
+                                <?php endif; ?>
                                 <span class="user-name"><?= cvcarts_h($studentName) ?></span>
                             </div></td>
                             <td><?= cvcarts_h($student['email']) ?></td>
