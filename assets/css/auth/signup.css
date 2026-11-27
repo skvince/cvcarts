@@ -434,42 +434,9 @@ body {
         0 0 18px rgba(24, 169, 104, 0.10);
 }
 
-.password-field {
-    position: relative;
-}
-
-.password-field input {
-    padding-right: 72px;
-}
-
 #password::-ms-reveal,
 #confirm-password::-ms-reveal {
     display: none;
-}
-
-.password-toggle {
-    position: absolute;
-    top: 50%;
-    right: 12px;
-    padding: 6px;
-    transform: translateY(-50%);
-    border: 0;
-    background: transparent;
-    color: #a7edb9;
-    font-family: var(--font-body);
-    font-size: var(--fs-caption);
-    font-weight: var(--fw-semibold);
-    cursor: pointer;
-}
-
-.password-toggle:hover {
-    color: var(--lime);
-    text-decoration: underline;
-}
-
-.password-toggle:focus-visible {
-    outline: 2px solid var(--lime);
-    outline-offset: 3px;
 }
 
 .password-hint {
@@ -477,6 +444,7 @@ body {
     margin-top: 6px;
     color: #b2cbb8;
     font-size: var(--fs-caption);
+    line-height: 1.4;
 }
 
 .input-group select {
@@ -549,6 +517,11 @@ body {
     cursor: pointer;
 }
 
+.terms-row input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .terms-text {
     color: #dfeee2;
     cursor: pointer;
@@ -565,6 +538,20 @@ body {
 .terms-link:hover,
 .terms-link:focus-visible {
     color: var(--lime);
+}
+
+.terms-link[aria-disabled="true"] {
+    color: #91a99a;
+    cursor: not-allowed;
+    opacity: 0.65;
+    text-decoration: none;
+}
+
+.terms-status {
+    margin: 7px 0 0;
+    color: #b2cbb8;
+    font-size: var(--fs-caption);
+    line-height: 1.5;
 }
 
 .terms-dialog {
@@ -696,10 +683,19 @@ body {
 .terms-modal-footer {
     flex: 0 0 auto;
     display: flex;
+    flex-direction: column;
     justify-content: stretch;
+    gap: 10px;
     padding: 14px 18px 18px;
     border-top: 1px solid rgba(74, 222, 128, 0.18);
     background: rgba(16, 26, 20, 0.96);
+}
+
+.terms-modal-status {
+    margin: 0;
+    color: #b2cbb8;
+    font-size: var(--fs-caption);
+    line-height: 1.5;
 }
 
 .terms-confirm-btn {
@@ -804,6 +800,16 @@ body {
     box-shadow:
         0 12px 30px rgba(32, 201, 107, 0.38),
         0 0 25px rgba(165, 239, 69, 0.22);
+}
+
+.auth-btn:disabled,
+.auth-btn:disabled:hover {
+    background: linear-gradient(110deg, #43574a, #52665a);
+    box-shadow: none;
+    cursor: not-allowed;
+    filter: none;
+    opacity: 0.7;
+    transform: none;
 }
 
 .auth-btn:active {

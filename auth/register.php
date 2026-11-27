@@ -4,18 +4,25 @@ require_once __DIR__ . '/../includes/mailer.php';
 
 $db = cvcarts_db();
 cvcarts_cleanup_expired_student_registrations($db);
+$validSecurityQuestions = [
+    "What is your mother's maiden name?",
+    'What was the name of your first school?',
+    'What is the name of your favorite teacher?',
+    'What city were you born in?',
+    'What was your childhood nickname?',
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     cvcarts_require_csrf();
-    $firstName = trim($_POST['first_name'] ?? '');
-    $middleName = trim($_POST['middle_name'] ?? '');
-    $lastName = trim($_POST['last_name'] ?? '');
-    $email = strtolower(trim($_POST['email'] ?? ''));
-    $password = $_POST['password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
-    $securityQuestion = trim($_POST['security_question'] ?? '');
-    $securityAnswer = trim($_POST['security_answer'] ?? '');
-    $agreeTerms = isset($_POST['agree_terms']) && $_POST['agree_terms'] === '1';
+    $firstName = is_string($_POST['first_name'] ?? null) ? trim($_POST['first_name']) : '';
+    $middleName = is_string($_POST['middle_name'] ?? null) ? trim($_POST['middle_name']) : '';
+    $lastName = is_string($_POST['last_name'] ?? null) ? trim($_POST['last_name']) : '';
+    $email = is_string($_POST['email'] ?? null) ? strtolower(trim($_POST['email'])) : '';
+    $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
+    $confirmPassword = is_string($_POST['confirm_password'] ?? null) ? $_POST['confirm_password'] : '';
+    $securityQuestion = is_string($_POST['security_question'] ?? null) ? trim($_POST['security_question']) : '';
+    $securityAnswer = is_string($_POST['security_answer'] ?? null) ? trim($_POST['security_answer']) : '';
+    $agreeTerms = isset($_POST['agree_terms']) && is_string($_POST['agree_terms']) && $_POST['agree_terms'] === '1';
 
     if ($email === '' || cvcarts_rate_limited('student_signup', $email, 3, 10, 60)) {
         cvcarts_record_auth_attempt('student_signup', $email ?: 'missing-email', false);
@@ -25,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     cvcarts_record_auth_attempt('student_signup', $email, false);
 
-    if ($firstName === '' || $lastName === '' || $email === '' || $password === '' || $securityQuestion === '' || $securityAnswer === '') {
+    if ($firstName === '' || $lastName === '' || $email === '' || $password === '' || $confirmPassword === '' || !in_array($securityQuestion, $validSecurityQuestions, true) || $securityAnswer === '') {
         cvcarts_flash('error', 'Please complete all required fields.');
         cvcarts_redirect(cvcarts_url('/auth/register.php'));
     }
@@ -40,8 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         cvcarts_redirect(cvcarts_url('/auth/register.php'));
     }
 
-    if (strlen($password) < 8 || $password !== $confirmPassword) {
-        cvcarts_flash('error', 'Password must be at least 8 characters and match the confirmation field.');
+    $passwordHasMinimumLength = preg_match('/^.{8,}$/us', $password) === 1;
+    $passwordStartsWithUppercase = preg_match('/^[A-Z]/', $password) === 1;
+    $passwordHasNumber = preg_match('/[0-9]/', $password) === 1;
+    $passwordHasSymbol = preg_match('/[^\p{L}\p{N}\s]/u', $password) === 1;
+    if (!$passwordHasMinimumLength || !$passwordStartsWithUppercase || !$passwordHasNumber || !$passwordHasSymbol || $password !== $confirmPassword) {
+        cvcarts_flash('error', 'Password must be at least 8 characters, start with an uppercase letter, include a number and symbol, and match the confirmation field.');
         cvcarts_redirect(cvcarts_url('/auth/register.php'));
     }
 
@@ -172,35 +183,27 @@ $flashes = cvcarts_get_flash();
 
                     <div class="input-group form-field-wide">
                         <label for="email">Email</label>
-                        <input type="email" id="email" name="email" placeholder="email@cscqc.edu.ph" autocomplete="email" pattern="[A-Za-z0-9._%+-]+@cscqc\.edu\.ph" title="Use your official @cscqc.edu.ph school email address." required>
+                        <input type="email" id="email" name="email" placeholder="email@cscqc.edu.ph" autocomplete="email" pattern="[A-Za-z0-9._%+\-]+@cscqc\.edu\.ph" title="Use your official @cscqc.edu.ph school email address." required>
                     </div>
 
                     <div class="input-group">
                         <label for="password">Password</label>
-                        <div class="password-field">
-                            <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" minlength="8" required>
-                            <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" data-password-toggle="password">Show</button>
-                        </div>
-                        <small class="password-hint">Use at least 8 characters.</small>
+                        <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" minlength="8" required>
+                        <small class="password-hint">At least 8 characters, starts with an uppercase letter, and includes a number and symbol.</small>
                     </div>
 
                     <div class="input-group">
                         <label for="confirm-password">Confirm Password</label>
-                        <div class="password-field">
-                            <input type="password" id="confirm-password" name="confirm_password" placeholder="Re-enter your password" autocomplete="new-password" minlength="8" required>
-                            <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false" data-password-toggle="confirm-password">Show</button>
-                        </div>
+                        <input type="password" id="confirm-password" name="confirm_password" placeholder="Re-enter your password" autocomplete="new-password" minlength="8" required>
                     </div>
 
                     <div class="input-group">
                         <label for="security-question">Security Question</label>
                         <select id="security-question" name="security_question" required>
                             <option value="">Choose a security question</option>
-                            <option>What is your mother's maiden name?</option>
-                            <option>What was the name of your first school?</option>
-                            <option>What is the name of your favorite teacher?</option>
-                            <option>What city were you born in?</option>
-                            <option>What was your childhood nickname?</option>
+                            <?php foreach ($validSecurityQuestions as $question): ?>
+                                <option value="<?php echo cvcarts_h($question); ?>"><?php echo cvcarts_h($question); ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
@@ -211,14 +214,15 @@ $flashes = cvcarts_get_flash();
 
                     <div class="terms-group">
                         <div class="terms-row">
-                            <input type="checkbox" id="agree-terms" name="agree_terms" value="1" required>
+                            <input type="checkbox" id="agree-terms" name="agree_terms" value="1" required disabled>
                             <label for="agree-terms" class="terms-text">I have read and agree to the</label>
-                            <a href="#" class="terms-link" data-open-terms>Terms and Conditions</a>
+                            <a href="#" class="terms-link" data-open-terms aria-disabled="true">Terms and Conditions</a>
                             <label for="agree-terms" class="terms-text">of CVCarts.</label>
                         </div>
+                        <p class="terms-status" id="terms-status" aria-live="polite">Complete all required fields to unlock the Terms &amp; Conditions.</p>
                     </div>
 
-                    <button type="submit" class="auth-btn">
+                    <button type="submit" class="auth-btn" disabled>
                         <span>Create Account</span>
                     </button>
                 </form>
@@ -255,7 +259,8 @@ $flashes = cvcarts_get_flash();
             </div>
 
             <footer class="terms-modal-footer">
-                <button type="button" class="terms-confirm-btn" data-close-terms>Agree &amp; Continue</button>
+                <p class="terms-modal-status" id="terms-modal-status" aria-live="polite">Please scroll down to read all Terms &amp; Conditions.</p>
+                <button type="button" class="terms-confirm-btn" data-close-terms>Close</button>
             </footer>
         </div>
     </dialog>
@@ -265,22 +270,84 @@ $flashes = cvcarts_get_flash();
             var modal = document.getElementById('terms-modal');
             var openLink = document.querySelector('[data-open-terms]');
             var closeButtons = document.querySelectorAll('[data-close-terms]');
+            var form = document.querySelector('.signup-form');
+            var agreement = document.getElementById('agree-terms');
+            var registerButton = form ? form.querySelector('button[type="submit"]') : null;
+            var termsBody = modal ? modal.querySelector('.terms-modal-body') : null;
+            var termsStatus = document.getElementById('terms-status');
+            var modalStatus = document.getElementById('terms-modal-status');
+            var requiredFields = form ? Array.prototype.slice.call(form.querySelectorAll('input[required]:not([type="checkbox"]), select[required], textarea[required]')) : [];
+            var fieldsAreValid = false;
+            var termsHaveBeenRead = false;
+            var fieldStatusMessage = 'Complete all required fields to unlock the Terms & Conditions.';
+            var scrollStatusMessage = 'Please scroll down to read all Terms & Conditions.';
+            var readyStatusMessage = 'You can now agree to the Terms & Conditions.';
+            var passwordRequirementsMessage = 'Use at least 8 characters, start with an uppercase letter, and include a number and symbol.';
 
-            document.querySelectorAll('[data-password-toggle]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    var input = document.getElementById(button.dataset.passwordToggle);
-                    var visible = input.type === 'password';
-                    input.type = visible ? 'text' : 'password';
-                    button.textContent = visible ? 'Hide' : 'Show';
-                    button.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
-                    button.setAttribute('aria-pressed', visible ? 'true' : 'false');
+            function updateStatus(message) {
+                if (termsStatus) {
+                    termsStatus.textContent = message;
+                }
+                if (modalStatus) {
+                    modalStatus.textContent = message;
+                }
+            }
+
+            function updateFormState() {
+                requiredFields.forEach(function (field) {
+                    if (field.type !== 'password' && field.value.trim() === '') {
+                        field.setCustomValidity('Please complete this required field.');
+                    } else {
+                        field.setCustomValidity('');
+                    }
                 });
-            });
+
+                var password = document.getElementById('password');
+                var confirmPassword = document.getElementById('confirm-password');
+                var passwordIsValid = password
+                    && Array.from(password.value).length >= 8
+                    && /^[A-Z]/.test(password.value)
+                    && /[0-9]/.test(password.value)
+                    && /[^\p{L}\p{N}\s]/u.test(password.value);
+                if (password) {
+                    password.setCustomValidity(password.value && !passwordIsValid ? passwordRequirementsMessage : '');
+                }
+                if (confirmPassword) {
+                    confirmPassword.setCustomValidity(
+                        confirmPassword.value && password && confirmPassword.value !== password.value
+                            ? 'Passwords must match.'
+                            : ''
+                    );
+                }
+
+                var wasValid = fieldsAreValid;
+                fieldsAreValid = requiredFields.every(function (field) {
+                    return field.validity.valid;
+                });
+
+                if (wasValid && !fieldsAreValid && agreement.checked) {
+                    agreement.checked = false;
+                }
+
+                var canAgree = fieldsAreValid && termsHaveBeenRead;
+                agreement.disabled = !canAgree;
+                if (openLink) {
+                    openLink.setAttribute('aria-disabled', fieldsAreValid ? 'false' : 'true');
+                }
+
+                if (registerButton) {
+                    registerButton.disabled = !(canAgree && agreement.checked);
+                }
+
+                updateStatus(!fieldsAreValid ? fieldStatusMessage : (termsHaveBeenRead ? readyStatusMessage : scrollStatusMessage));
+            }
 
             if (openLink && modal) {
                 openLink.addEventListener('click', function (event) {
                     event.preventDefault();
-                    modal.showModal();
+                    if (fieldsAreValid) {
+                        modal.showModal();
+                    }
                 });
             }
 
@@ -306,6 +373,38 @@ $flashes = cvcarts_get_flash();
                     }
                 });
             }
+
+            requiredFields.forEach(function (field) {
+                field.addEventListener('input', updateFormState);
+                field.addEventListener('change', updateFormState);
+            });
+
+            if (termsBody) {
+                termsBody.addEventListener('scroll', function () {
+                    if (fieldsAreValid && termsBody.scrollTop + termsBody.clientHeight >= termsBody.scrollHeight - 1) {
+                        termsHaveBeenRead = true;
+                        updateFormState();
+                    }
+                }, { passive: true });
+            }
+
+            if (agreement) {
+                agreement.addEventListener('change', updateFormState);
+            }
+
+            if (form) {
+                form.addEventListener('submit', function (event) {
+                    updateFormState();
+                    if (!fieldsAreValid) {
+                        event.preventDefault();
+                        form.reportValidity();
+                    } else if (!termsHaveBeenRead || !agreement.checked) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            updateFormState();
         });
     </script>
     <script src="<?php echo cvcarts_h(cvcarts_url('/assets/js/auth-carousel.js?v=' . filemtime(__DIR__ . '/../assets/js/auth-carousel.js'))); ?>" defer></script>
