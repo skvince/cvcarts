@@ -253,61 +253,6 @@ $chartSeries = [
 ];
 
 /* =========================================
-   RECENT ORDERS
-========================================= */
-
-$recentOrdersQuery = $db->prepare(
-    "SELECT
-        o.id,
-        o.reference_number,
-        u.first_name,
-        u.middle_name,
-        u.last_name,
-        o.payment_method,
-        o.payment_status,
-        o.order_status,
-        o.created_at,
-        COALESCE(
-            GROUP_CONCAT(
-                DISTINCT CONCAT(p.name, ' × ', oi.quantity)
-                ORDER BY p.name
-                SEPARATOR ', '
-            ),
-            'No items'
-        ) AS items
-     FROM orders o
-     INNER JOIN users u ON u.id = o.user_id
-     LEFT JOIN order_items oi ON oi.order_id = o.id
-     LEFT JOIN products p ON p.id = oi.product_id
-     WHERE o.created_at >= :start
-       AND o.created_at < :end
-     GROUP BY
-        o.id,
-        o.reference_number,
-        u.first_name,
-        u.middle_name,
-        u.last_name,
-        o.payment_method,
-        o.payment_status,
-        o.order_status,
-        o.created_at
-     ORDER BY
-        CASE
-            WHEN o.payment_status = 'Pending Verification'
-              OR (o.payment_method = 'Cash' AND o.payment_status = 'Unpaid' AND o.order_status = 'Pending')
-            THEN 0 ELSE 1
-        END,
-        o.created_at DESC,
-        o.id DESC
-     LIMIT 6"
-);
-$recentOrdersQuery->execute([
-    'start' => $rangeStart,
-    'end' => $rangeEnd,
-]);
-$recentOrders = $recentOrdersQuery->fetchAll(PDO::FETCH_ASSOC);
-
-/* =========================================
    TOP 3 BEST-SELLING PRODUCTS
 ========================================= */
 
@@ -825,73 +770,6 @@ $statCards = [
                     </div>
                 </section>
 
-                <section class="panel dashboard-panel recent-orders-panel" aria-labelledby="recent-orders-title">
-                    <div class="panel-heading dashboard-panel-heading">
-                        <div>
-                            <h2 id="recent-orders-title">Recent Orders / Action Needed</h2>
-                            <p>Orders from <?php echo cvcarts_h($selectedMonthName . ' ' . $selectedYear); ?></p>
-                        </div>
-                        <span class="panel-heading-icon" aria-hidden="true"><i class="bi bi-receipt"></i></span>
-                    </div>
-
-                    <div class="recent-orders-scroll">
-                        <table class="recent-orders-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Order ID</th>
-                                    <th scope="col">Student</th>
-                                    <th scope="col">Item</th>
-                                    <th scope="col">Status</th>
-                                    <th scope="col" class="action-cell"><span class="visually-hidden">Action</span></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!$recentOrders): ?>
-                                    <tr>
-                                        <td colspan="5" class="recent-orders-empty">
-                                            No orders for this month.
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <?php foreach ($recentOrders as $order): ?>
-                                        <?php
-                                        $studentName = trim(
-                                            $order['first_name'] . ' ' .
-                                            (!empty($order['middle_name']) ? $order['middle_name'] . ' ' : '') .
-                                            $order['last_name']
-                                        );
-                                        $needsAction = $order['payment_status'] === 'Pending Verification'
-                                            || (
-                                                $order['payment_method'] === 'Cash'
-                                                && $order['payment_status'] === 'Unpaid'
-                                                && $order['order_status'] === 'Pending'
-                                            );
-                                        $orderViewUrl = cvcarts_url(
-                                            '/admin/order-status/index.php?view=' . (int)$order['id']
-                                        );
-                                        ?>
-                                        <tr>
-                                            <td>
-                                                <strong><?php echo cvcarts_h($order['reference_number']); ?></strong>
-                                            </td>
-                                            <td><?php echo cvcarts_h($studentName); ?></td>
-                                            <td class="recent-order-item" title="<?php echo cvcarts_h($order['items']); ?>">
-                                                <?php echo cvcarts_h($order['items']); ?>
-                                            </td>
-                                            <td class="status-cell"><?php echo cvcarts_status_badge($order['order_status']); ?></td>
-                                            <td class="action-cell">
-                                                <a
-                                                    class="recent-order-action <?php echo $needsAction ? 'recent-order-action-needed' : ''; ?>"
-                                                    href="<?php echo cvcarts_h($orderViewUrl); ?>"
-                                                ><?php echo $needsAction ? 'Review' : 'View'; ?></a>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
             </div>
         </div>
 
