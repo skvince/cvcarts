@@ -172,7 +172,7 @@ $periodLabel = $period === 'specific'
                 </article>
             </section>
 
-            <!-- Payment method and revenue breakdown -->
+            <!-- Payment method breakdown -->
             <section class="sales-grid" aria-label="Sales breakdown">
                 <article class="panel sales-breakdown-panel">
                     <div class="panel-heading">
@@ -195,20 +195,6 @@ $periodLabel = $period === 'specific'
                                 <span class="stock-pill"><?php echo cvcarts_format_money((float) $method['revenue']); ?></span>
                             </div>
                         <?php endforeach; ?>
-                    </div>
-                </article>
-
-                <article class="panel sales-breakdown-panel">
-                    <div class="panel-heading">
-                        <h2>Sales Summary</h2>
-                    </div>
-
-                    <div class="sales-summary">
-                        <div class="sales-summary-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></div>
-                        <div>
-                            <strong><?php echo cvcarts_format_money((float) $stats['revenue']); ?></strong>
-                            <p>Revenue recognized in the selected period.</p>
-                        </div>
                     </div>
                 </article>
             </section>
